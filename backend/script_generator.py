@@ -1,9 +1,8 @@
-\
 import re
 from typing import Dict, List, Tuple
-import yaml
 
 from .chapter_parser import Chapter, parse_chapters, summarize_content
+from .graph_builder import build_character_graph_from_data
 from .llm_client import LLMClient, LLMError
 from .prompt_templates import build_generation_prompt, build_repair_prompt
 from .yaml_validator import validate_yaml_text, dump_yaml
@@ -16,7 +15,6 @@ def _extract_dialogues(text: str) -> List[Tuple[str, str, str]]:
     """
     dialogues: List[Tuple[str, str, str]] = []
 
-    # Pattern: 林安说道：“那就从第一桩开始。”
     pattern1 = re.compile(r"([\u4e00-\u9fff]{2,4})(?:低声|急忙|冷冷|轻声|大声)?(?:说|说道|问|喊|答|反驳|提醒|叹道)[：:，“”\\s]*[“\"]([^”\"]{1,120})[”\"]")
     for m in pattern1.finditer(text):
         speaker = m.group(1)
@@ -32,7 +30,6 @@ def _extract_dialogues(text: str) -> List[Tuple[str, str, str]]:
             emotion = "激动"
         dialogues.append((speaker, line, emotion))
 
-    # Standalone quoted text fallback.
     if not dialogues:
         for i, m in enumerate(re.finditer(r"[“\"]([^”\"]{1,120})[”\"]", text), start=1):
             dialogues.append((f"角色{i}", m.group(1).strip(), "自然"))
@@ -44,27 +41,27 @@ def _guess_names(text: str) -> List[str]:
     names = []
     patterns = [
         r"([\u4e00-\u9fff]{2,4})(?:低声|急忙|冷冷|轻声|大声)?(?:说|说道|问|喊|答|反驳|提醒|叹道)",
-        r"([\u4e00-\u9fff]{2,4})(?:第一次|走进|看着|发现|让|站在|跪在|脸色)",
+        r"([\u4e00-\u9fff]{2,4})(?:第一次|走进|看着|发现|让|站在|跪在|脸色|沉默|皱眉|转身)",
     ]
+    blacklist = {"一个", "旁边", "今日", "第一", "第二", "第三", "小说", "作者", "系统", "他们", "我们", "你们", "时候"}
     for pattern in patterns:
         for name in re.findall(pattern, text):
-            if name not in {"一个", "旁边", "今日", "第一", "第二", "第三", "小说", "作者", "系统"} and name not in names:
+            if name not in blacklist and name not in names:
                 names.append(name)
     if not names:
         names = ["主角"]
-    return names[:8]
+    return names[:10]
 
 
 def _make_characters(chapters: List[Chapter]) -> Tuple[List[Dict], Dict[str, str]]:
     all_text = "\n".join(ch.content for ch in chapters)
     names = _guess_names(all_text)
 
-    # Merge dialogue speakers into names.
     for speaker, _, _ in _extract_dialogues(all_text):
         if speaker not in names and not speaker.startswith("角色"):
             names.append(speaker)
 
-    names = names[:10]
+    names = names[:12]
     characters = []
     name_to_id = {}
     for idx, name in enumerate(names, start=1):
@@ -110,11 +107,9 @@ def _build_rule_based_yaml(novel_text: str) -> str:
                 }
             )
 
-        # If no dialogue was found, create a short narration line to keep the YAML complete.
         if not dialogue_items:
             scene_char_ids.add(fallback_char_id)
 
-        # Add characters whose names appear in this chapter.
         for name, char_id in name_to_id.items():
             if name in chapter.content:
                 scene_char_ids.add(char_id)
@@ -122,14 +117,12 @@ def _build_rule_based_yaml(novel_text: str) -> str:
         if not scene_char_ids:
             scene_char_ids.add(fallback_char_id)
 
-        # Simple action extraction by sentences.
         sentence_candidates = re.split(r"[。！？!?]\s*", chapter.content)
         actions = []
         for sentence in sentence_candidates:
             sentence = re.sub(r"\s+", "", sentence)
             if not sentence:
                 continue
-            # Avoid putting quoted dialogue into action.
             sentence = re.sub(r"[“\"].*?[”\"]", "", sentence).strip("，,：:")
             if len(sentence) >= 6:
                 actions.append(sentence[:120])
@@ -174,8 +167,44 @@ def _build_rule_based_yaml(novel_text: str) -> str:
     return dump_yaml(data)
 
 
-def generate_script_yaml(novel_text: str, style: str = "影视剧本", language: str = "zh-CN") -> Dict:
+def _package_result(
+    yaml_text: str,
+    chapter_count: int,
+    message: str,
+    mock_mode: bool,
+    provider: str,
+    model: str = "",
+) -> Dict:
+    validation = validate_yaml_text(yaml_text)
+    graph = build_character_graph_from_data(validation.get("data"))
+    return {
+        "success": validation["valid"],
+        "yaml": yaml_text,
+        "data": validation.get("data"),
+        "validation": {
+            "valid": validation["valid"],
+            "errors": validation["errors"],
+            "warnings": validation["warnings"],
+        },
+        "chapter_count": chapter_count,
+        "message": message,
+        "mock_mode": mock_mode,
+        "provider": provider,
+        "model": model,
+        "graph": graph,
+    }
+
+
+def generate_script_yaml(
+    novel_text: str,
+    style: str = "影视剧本",
+    language: str = "zh-CN",
+    provider: str = "local",
+    model: str | None = None,
+) -> Dict:
     chapters = parse_chapters(novel_text)
+    provider = (provider or "local").lower()
+
     if len(chapters) < 3:
         return {
             "success": False,
@@ -188,7 +217,10 @@ def generate_script_yaml(novel_text: str, style: str = "影视剧本", language:
             },
             "chapter_count": len(chapters),
             "message": "章节数量不足，未调用大模型。",
-            "mock_mode": False,
+            "mock_mode": provider == "local",
+            "provider": provider,
+            "model": model or "",
+            "graph": {"nodes": [], "edges": []},
         }
 
     chapter_payload = {
@@ -205,51 +237,52 @@ def generate_script_yaml(novel_text: str, style: str = "影视剧本", language:
         ],
     }
 
+    # Page-level local provider is now the stable no-key demo path.
+    if provider == "local":
+        yaml_text = _build_rule_based_yaml(novel_text)
+        return _package_result(
+            yaml_text=yaml_text,
+            chapter_count=len(chapters),
+            message="本地演示模型已生成可演示 YAML，无需 API Key。",
+            mock_mode=True,
+            provider="local",
+            model=model or "local-rule",
+        )
+
     client = LLMClient()
 
-    if client.is_mock():
+    # Backward compatibility: if old env still sets USE_MOCK_LLM=true, use local generator.
+    if client.is_mock() and provider != "qiniu":
         yaml_text = _build_rule_based_yaml(novel_text)
-        validation = validate_yaml_text(yaml_text)
-        return {
-            "success": validation["valid"],
-            "yaml": yaml_text,
-            "data": validation.get("data"),
-            "validation": {
-                "valid": validation["valid"],
-                "errors": validation["errors"],
-                "warnings": validation["warnings"],
-            },
-            "chapter_count": len(chapters),
-            "message": "Mock 模式已生成可演示 YAML。若要调用真实模型，请配置 .env。",
-            "mock_mode": True,
-        }
+        return _package_result(
+            yaml_text=yaml_text,
+            chapter_count=len(chapters),
+            message="Mock 模式已生成可演示 YAML。",
+            mock_mode=True,
+            provider="local",
+            model="local-rule",
+        )
 
     try:
         prompt = build_generation_prompt(novel_text, chapter_payload, style, language)
-        yaml_text = client.generate_text(prompt)
+        yaml_text = client.generate_text(prompt, provider=provider, model=model)
         validation = validate_yaml_text(yaml_text)
 
         if not validation["valid"]:
             repair_prompt = build_repair_prompt(yaml_text, validation["errors"])
-            repaired_yaml = client.generate_text(repair_prompt)
+            repaired_yaml = client.generate_text(repair_prompt, provider=provider, model=model)
             repaired_validation = validate_yaml_text(repaired_yaml)
             if repaired_validation["valid"]:
                 yaml_text = repaired_yaml
-                validation = repaired_validation
 
-        return {
-            "success": validation["valid"],
-            "yaml": yaml_text,
-            "data": validation.get("data"),
-            "validation": {
-                "valid": validation["valid"],
-                "errors": validation["errors"],
-                "warnings": validation["warnings"],
-            },
-            "chapter_count": len(chapters),
-            "message": "剧本生成完成。" if validation["valid"] else "AI 已返回内容，但 YAML 校验未完全通过。",
-            "mock_mode": False,
-        }
+        return _package_result(
+            yaml_text=yaml_text,
+            chapter_count=len(chapters),
+            message="剧本生成完成。",
+            mock_mode=False,
+            provider=provider,
+            model=model or "",
+        )
     except LLMError as exc:
         return {
             "success": False,
@@ -263,4 +296,7 @@ def generate_script_yaml(novel_text: str, style: str = "影视剧本", language:
             "chapter_count": len(chapters),
             "message": str(exc),
             "mock_mode": False,
+            "provider": provider,
+            "model": model or "",
+            "graph": {"nodes": [], "edges": []},
         }
