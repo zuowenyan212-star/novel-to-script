@@ -1,0 +1,110 @@
+schema_version: "1.0"
+title: "雨灯档案"
+source:
+  type: "novel"
+  chapters:
+    -
+      id: "chapter_001"
+      title: "第一章 雨夜重逢"
+      word_count: 178
+    -
+      id: "chapter_002"
+      title: "第二章 旧仓库"
+      word_count: 164
+    -
+      id: "chapter_003"
+      title: "第三章 天台黎明"
+      word_count: 152
+logline: "雨夜的街边咖啡馆只剩最后一盏灯。，并在后续章节中推进至：黎明前，两人从仓库后窗逃出，赶到老报社天台。"
+theme: "追寻真相与自我和解；改编策略：忠于原文"
+metadata:
+  style: "影视剧本"
+  language: "zh-CN"
+  adaptation_mode: "忠于原文"
+  detail_level: "标准"
+  generated_at: "2026-06-05 10:00:00"
+  generator: "local-demo"
+characters:
+  -
+    id: "char_001"
+    name: "苏晚"
+    role: "主角"
+    description: "苏晚是推动故事前进的核心人物，面对事件时保持主动与观察。"
+    goal: "查清事件真相并完成自我选择"
+  -
+    id: "char_002"
+    name: "林舟"
+    role: "重要角色"
+    description: "林舟掌握关键线索，与主角共同接近事件真相。"
+    goal: "影响主角判断并推动关键事件发生"
+scenes:
+  -
+    id: "scene_001"
+    source_chapter: "chapter_001"
+    title: "雨夜重逢"
+    location: "咖啡馆"
+    time: "夜晚"
+    characters:
+      - "char_001"
+      - "char_002"
+    summary: "雨夜的街边咖啡馆只剩最后一盏灯。"
+    action:
+      - "雨夜的街边咖啡馆只剩最后一盏灯。"
+      - "林舟推门进来时，伞尖的水滴在门口连成一条细线。"
+    dialogue:
+      -
+        speaker: "char_001"
+        line: "你父亲当年调查的旧案，没有结束。"
+        emotion: "平静"
+      -
+        speaker: "char_002"
+        line: "我回来，不是为了翻旧账。"
+        emotion: "克制"
+    transition: "切至下一章节场景。"
+  -
+    id: "scene_002"
+    source_chapter: "chapter_002"
+    title: "旧仓库"
+    location: "旧仓库"
+    time: "清晨"
+    characters:
+      - "char_001"
+      - "char_002"
+    summary: "清晨，林舟按照照片背后的地址来到城北旧仓库。"
+    action:
+      - "清晨，林舟按照照片背后的地址来到城北旧仓库。"
+      - "铁门半开，地面有新的轮胎印。"
+    dialogue:
+      -
+        speaker: "char_002"
+        line: "这是谁留下的？"
+        emotion: "疑问"
+      -
+        speaker: "char_001"
+        line: "当年唯一的目击者，他昨晚联系过我。"
+        emotion: "平静"
+    transition: "切至下一章节场景。"
+  -
+    id: "scene_003"
+    source_chapter: "chapter_003"
+    title: "天台黎明"
+    location: "天台"
+    time: "黎明"
+    characters:
+      - "char_001"
+      - "char_002"
+    summary: "黎明前，两人从仓库后窗逃出，赶到老报社天台。"
+    action:
+      - "黎明前，两人从仓库后窗逃出，赶到老报社天台。"
+      - "城市还没有完全醒来，远处的楼顶铺着淡蓝色的光。"
+    dialogue:
+      -
+        speaker: "char_002"
+        line: "如果真相会伤到所有人呢？"
+        emotion: "疑问"
+      -
+        speaker: "char_001"
+        line: "那也比继续沉默好。"
+        emotion: "平静"
+    transition: "淡出，进入片尾。"
+

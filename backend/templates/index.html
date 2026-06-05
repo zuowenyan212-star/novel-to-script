@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI 小说转剧本工具</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Novel to YAML Script</p>
+          <h1>AI 小说转剧本工具</h1>
+        </div>
+        <div class="run-badge" id="providerBadge">本地演示模式</div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel input-panel" aria-labelledby="inputTitle">
+          <div class="panel-head">
+            <div>
+              <h2 id="inputTitle">小说文本</h2>
+              <p id="chapterHint">当前 0 个章节</p>
+            </div>
+            <button class="ghost-button" id="loadExampleButton" type="button">填入示例</button>
+          </div>
+
+          <textarea
+            id="novelInput"
+            spellcheck="false"
+            placeholder="第一章 雨夜重逢&#10;……&#10;&#10;第二章 旧仓库&#10;……&#10;&#10;第三章 天台黎明&#10;……"
+          ></textarea>
+
+          <div class="metrics" aria-live="polite">
+            <div>
+              <span class="metric-label">字数</span>
+              <strong id="wordCount">0</strong>
+            </div>
+            <div>
+              <span class="metric-label">章节</span>
+              <strong id="chapterCount">0</strong>
+            </div>
+            <div>
+              <span class="metric-label">状态</span>
+              <strong id="inputStatus">待输入</strong>
+            </div>
+          </div>
+
+          <div class="control-grid">
+            <label>
+              <span>剧本类型</span>
+              <select id="styleSelect">
+                <option>影视剧本</option>
+                <option>短剧剧本</option>
+                <option>舞台剧剧本</option>
+              </select>
+            </label>
+            <label>
+              <span>改编风格</span>
+              <select id="modeSelect">
+                <option>忠于原文</option>
+                <option>增强戏剧冲突</option>
+                <option>对白更口语化</option>
+              </select>
+            </label>
+            <label>
+              <span>场景详细程度</span>
+              <select id="detailSelect">
+                <option>标准</option>
+                <option>简洁</option>
+                <option>详细</option>
+              </select>
+            </label>
+          </div>
+
+          <button class="primary-button" id="generateButton" type="button" disabled>生成剧本</button>
+          <div class="notice" id="notice" role="status"></div>
+        </section>
+
+        <section class="panel output-panel" aria-labelledby="outputTitle">
+          <div class="panel-head">
+            <div>
+              <h2 id="outputTitle">生成结果</h2>
+              <p id="validationSummary">等待生成</p>
+            </div>
+            <div class="button-row">
+              <button class="ghost-button" id="validateButton" type="button" disabled>校验</button>
+              <button class="ghost-button" id="copyButton" type="button" disabled>复制</button>
+              <button class="ghost-button" id="downloadButton" type="button" disabled>下载 YAML</button>
+            </div>
+          </div>
+
+          <div class="view-tabs" role="tablist">
+            <button class="tab-button active" data-view="yaml" type="button">YAML</button>
+            <button class="tab-button" data-view="characters" type="button">角色表</button>
+            <button class="tab-button" data-view="scenes" type="button">场景列表</button>
+          </div>
+
+          <div class="validation-box" id="validationBox">暂无校验结果</div>
+
+          <div class="view active" id="yamlView">
+            <pre id="yamlOutput">生成后的 YAML 会显示在这里。</pre>
+          </div>
+
+          <div class="view" id="charactersView">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>姓名</th>
+                  <th>角色</th>
+                  <th>目标</th>
+                </tr>
+              </thead>
+              <tbody id="characterRows"></tbody>
+            </table>
+          </div>
+
+          <div class="view" id="scenesView">
+            <div class="scene-list" id="sceneList"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/static/js/main.js"></script>
+  </body>
+</html>
+
