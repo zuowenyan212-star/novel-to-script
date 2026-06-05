@@ -6,6 +6,7 @@ const state = {
   script: null,
   filename: "script_output.yaml",
   activeHistoryId: null,
+  messages: [],
 };
 
 const els = {
@@ -39,6 +40,7 @@ const els = {
   resultMessage: document.querySelector("#resultMessage"),
   inputSummaryMessage: document.querySelector("#inputSummaryMessage"),
   inputSummaryText: document.querySelector("#inputSummaryText"),
+  chatMessages: document.querySelector("#chatMessages"),
   historyList: document.querySelector("#historyList"),
 };
 
@@ -69,6 +71,25 @@ function setValidation(report) {
   }
 }
 
+function setGenerating(isGenerating, label = "生成中...") {
+  els.generateButton.classList.toggle("loading", isGenerating);
+  els.resultMessage.classList.toggle("is-loading", isGenerating);
+  els.generateButton.disabled = isGenerating || !canSendCurrentInput();
+  els.generateButton.textContent = isGenerating ? label : "发送";
+}
+
+function canSendCurrentInput() {
+  const text = els.novelInput.value.trim();
+  if (!text) {
+    return false;
+  }
+  return Boolean(state.yaml || state.chapterCount >= 3);
+}
+
+function refreshSendButtonState() {
+  els.generateButton.disabled = !canSendCurrentInput();
+}
+
 function localWordCount(text) {
   const cjk = text.match(/[\u4e00-\u9fff]/g) || [];
   const latin = text.match(/[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*/g) || [];
@@ -81,7 +102,7 @@ async function apiPost(path, payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await response.json();
+  const data = await readJsonResponse(response);
   if (!response.ok) {
     throw new Error(data.error || "请求失败");
   }
@@ -95,11 +116,19 @@ async function apiUpload(path, file) {
     method: "POST",
     body: formData,
   });
-  const data = await response.json();
+  const data = await readJsonResponse(response);
   if (!response.ok) {
     throw new Error(data.error || "文件识别失败");
   }
   return data;
+}
+
+async function readJsonResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+  return { error: (await response.text()).slice(0, 240) || "服务未返回 JSON。" };
 }
 
 function updateInputSummary() {
@@ -122,7 +151,10 @@ function updateBasicStats() {
     els.chapterCount.textContent = "0";
     els.chapterHint.textContent = "当前 0 个章节";
     els.inputStatus.textContent = "待输入";
-    els.generateButton.disabled = true;
+    refreshSendButtonState();
+  } else if (state.yaml) {
+    els.inputStatus.textContent = "可续聊";
+    refreshSendButtonState();
   }
 }
 
@@ -138,10 +170,15 @@ async function parseChapters() {
     els.chapterCount.textContent = state.chapterCount;
     els.wordCount.textContent = data.total_word_count || localWordCount(text);
     els.chapterHint.textContent = `当前 ${state.chapterCount} 个章节`;
-    els.inputStatus.textContent = data.meets_requirement ? "可生成" : "章节不足";
-    els.generateButton.disabled = !data.meets_requirement;
+    els.inputStatus.textContent = data.meets_requirement ? "可生成" : state.yaml ? "可续聊" : "章节不足";
+    refreshSendButtonState();
     if (!data.meets_requirement) {
-      setNotice(`当前仅检测到 ${state.chapterCount} 个章节，请至少输入 3 个章节。`, "error");
+      setNotice(
+        state.yaml
+          ? "将作为本轮修改要求发送。"
+          : `当前仅检测到 ${state.chapterCount} 个章节，请至少输入 3 个章节。`,
+        state.yaml ? "ok" : "error"
+      );
     } else {
       setNotice("章节检测通过，可以生成剧本。", "ok");
     }
@@ -152,6 +189,8 @@ async function parseChapters() {
 
 function scheduleParse() {
   window.clearTimeout(parseTimer);
+  updateBasicStats();
+  refreshSendButtonState();
   parseTimer = window.setTimeout(parseChapters, 280);
 }
 
@@ -189,6 +228,14 @@ async function uploadFile(file) {
   setNotice(`正在识别文件：${file.name}...`);
   els.uploadFileButton.disabled = true;
   try {
+    const extension = file.name.split(".").pop().toLowerCase();
+    if (["txt", "md", "markdown"].includes(extension)) {
+      els.novelInput.value = await file.text();
+      await parseChapters();
+      setNotice(`已读取 ${file.name}。`, "ok");
+      scrollConversationToBottom();
+      return;
+    }
     const data = await apiUpload("/api/extract-text", file);
     els.novelInput.value = data.text || "";
     await parseChapters();
@@ -203,25 +250,42 @@ async function uploadFile(file) {
 }
 
 async function generateScript() {
-  if (state.chapterCount < 3) {
+  const message = els.novelInput.value.trim();
+  if (!message) {
+    setNotice("请输入小说文本或本轮修改要求。", "error");
+    return;
+  }
+  if (!state.yaml && state.chapterCount < 3) {
     await parseChapters();
     return;
   }
+  const isRevision = Boolean(state.yaml && state.chapterCount < 3);
+  appendConversationMessage("user", isRevision ? "修改要求" : "小说文本", summarizeForBubble(message));
+  state.messages.push({ role: "user", title: isRevision ? "修改要求" : "小说文本", text: summarizeForBubble(message) });
   els.resultMessage.hidden = false;
-  els.generateButton.disabled = true;
-  els.generateButton.textContent = "生成中...";
-  setNotice("正在生成剧本...");
+  setGenerating(true, isRevision ? "改稿中..." : "生成中...");
+  setNotice(isRevision ? "正在根据本轮要求更新剧本..." : "正在生成剧本...");
   setValidation(null);
   scrollConversationToBottom();
   try {
-    const data = await apiPost("/api/generate-script", {
-      novel_text: els.novelInput.value,
+    const endpoint = isRevision ? "/api/chat-turn" : "/api/generate-script";
+    const payload = isRevision ? {
+      message,
+      existing_yaml: state.yaml,
       style: els.styleSelect.value,
       language: "zh-CN",
       adaptation_mode: els.modeSelect.value,
       detail_level: els.detailSelect.value,
       model_mode: els.modelModeSelect.value,
-    });
+    } : {
+      novel_text: message,
+      style: els.styleSelect.value,
+      language: "zh-CN",
+      adaptation_mode: els.modeSelect.value,
+      detail_level: els.detailSelect.value,
+      model_mode: els.modelModeSelect.value,
+    };
+    const data = await apiPost(endpoint, payload);
     if (!data.success) {
       throw new Error(data.error || "生成结果未通过校验");
     }
@@ -233,14 +297,19 @@ async function generateScript() {
     setValidation(data.validation);
     renderPreview(state.script);
     enableResultButtons(true);
+    appendConversationMessage("assistant", isRevision ? "已完成本轮改稿" : "已生成剧本", data.reply || "已更新结构化 YAML。");
+    state.messages.push({ role: "assistant", title: isRevision ? "已完成本轮改稿" : "已生成剧本", text: data.reply || "已更新结构化 YAML。" });
     saveHistory(data);
     setNotice("剧本已生成。", "ok");
+    els.novelInput.value = "";
+    updateBasicStats();
   } catch (error) {
     setNotice(error.message, "error");
     setValidation({ valid: false, errors: [error.message], warnings: [] });
+    appendConversationMessage("assistant", "处理失败", error.message);
   } finally {
-    els.generateButton.textContent = "生成剧本";
-    els.generateButton.disabled = state.chapterCount < 3;
+    setGenerating(false);
+    refreshSendButtonState();
     scrollConversationToBottom();
   }
 }
@@ -326,10 +395,12 @@ function newChat() {
   state.script = null;
   state.filename = "script_output.yaml";
   state.activeHistoryId = null;
+  state.messages = [];
   els.novelInput.value = "";
   els.yamlOutput.textContent = "生成后的 YAML 会显示在这里。";
   els.resultMessage.hidden = true;
   els.inputSummaryMessage.hidden = true;
+  els.chatMessages.innerHTML = "";
   els.characterRows.innerHTML = "";
   els.sceneList.innerHTML = "";
   enableResultButtons(false);
@@ -352,6 +423,7 @@ function saveHistory(data) {
     inputPreview: els.novelInput.value.trim().replace(/\s+/g, " ").slice(0, 220),
     validation: data.validation,
     provider: els.providerBadge.textContent,
+    messages: state.messages,
   };
   try {
     const history = loadHistory().filter((entry) => entry.id !== state.activeHistoryId);
@@ -379,11 +451,30 @@ function renderHistory() {
     return;
   }
   els.historyList.innerHTML = history.map((item) => `
-    <button class="history-item ${item.id === state.activeHistoryId ? "active" : ""}" data-history-id="${escapeHtml(item.id)}" type="button">
-      <strong>${escapeHtml(item.title)}</strong>
-      <span>${escapeHtml(item.createdAt)}</span>
-    </button>
+    <div class="history-item ${item.id === state.activeHistoryId ? "active" : ""}" data-history-id="${escapeHtml(item.id)}">
+      <button class="history-open" data-history-open="${escapeHtml(item.id)}" type="button" title="打开会话">
+        <strong>${escapeHtml(item.title)}</strong>
+        <span>${escapeHtml(item.createdAt)}</span>
+      </button>
+      <button class="history-delete" data-history-delete="${escapeHtml(item.id)}" type="button" title="删除会话">删除</button>
+    </div>
   `).join("");
+}
+
+function deleteHistoryItem(id) {
+  const history = loadHistory().filter((entry) => entry.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  if (state.activeHistoryId === id) {
+    state.activeHistoryId = null;
+    if (history[0]) {
+      openHistoryItem(history[0].id);
+    } else {
+      newChat();
+    }
+    return;
+  }
+  renderHistory();
+  setNotice("已删除该会话记录。", "ok");
 }
 
 function openHistoryItem(id) {
@@ -395,18 +486,46 @@ function openHistoryItem(id) {
   state.yaml = item.yaml || "";
   state.script = item.script || null;
   state.filename = item.filename || "script_output.yaml";
+  state.messages = Array.isArray(item.messages) ? item.messages : [];
   els.novelInput.value = "";
   els.providerBadge.textContent = item.provider || "历史记录";
   els.yamlOutput.textContent = state.yaml || "生成后的 YAML 会显示在这里。";
   els.resultMessage.hidden = !state.yaml;
   setValidation(item.validation || null);
   renderPreview(state.script);
+  renderConversationMessages();
   enableResultButtons(Boolean(state.yaml));
   updateBasicStats();
   els.inputSummaryText.textContent = item.inputPreview || "已打开历史生成结果。";
   els.inputSummaryMessage.hidden = false;
   renderHistory();
   scrollConversationToBottom();
+}
+
+function appendConversationMessage(role, title, text) {
+  els.chatMessages.insertAdjacentHTML("beforeend", renderMessageHtml(role, title, text));
+}
+
+function renderConversationMessages() {
+  els.chatMessages.innerHTML = state.messages.map((message) => renderMessageHtml(message.role, message.title, message.text)).join("");
+}
+
+function renderMessageHtml(role, title, text) {
+  const isUser = role === "user";
+  return `
+    <article class="message ${isUser ? "user-message" : "assistant-message"} turn-message">
+      <div class="avatar">${isUser ? "你" : "AI"}</div>
+      <div class="message-body">
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(text)}</p>
+      </div>
+    </article>
+  `;
+}
+
+function summarizeForBubble(text) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  return clean.length > 260 ? `${clean.slice(0, 260)}...` : clean;
 }
 
 function inferHistoryTitle(text) {
@@ -448,9 +567,15 @@ document.querySelectorAll(".tab-button").forEach((button) => {
 });
 
 els.historyList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-history-id]");
-  if (button) {
-    openHistoryItem(button.dataset.historyId);
+  const deleteButton = event.target.closest("[data-history-delete]");
+  if (deleteButton) {
+    event.stopPropagation();
+    deleteHistoryItem(deleteButton.dataset.historyDelete);
+    return;
+  }
+  const openButton = event.target.closest("[data-history-open]");
+  if (openButton) {
+    openHistoryItem(openButton.dataset.historyOpen);
   }
 });
 
@@ -466,6 +591,21 @@ els.dropZone.addEventListener("dragover", (event) => {
 });
 els.dropZone.addEventListener("dragleave", () => els.dropZone.classList.remove("dragging"));
 els.dropZone.addEventListener("drop", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  els.dropZone.classList.remove("dragging");
+  uploadFile(event.dataTransfer.files[0]);
+});
+document.addEventListener("dragover", (event) => {
+  if (event.dataTransfer && Array.from(event.dataTransfer.types).includes("Files")) {
+    event.preventDefault();
+    els.dropZone.classList.add("dragging");
+  }
+});
+document.addEventListener("drop", (event) => {
+  if (!event.dataTransfer || !event.dataTransfer.files.length) {
+    return;
+  }
   event.preventDefault();
   els.dropZone.classList.remove("dragging");
   uploadFile(event.dataTransfer.files[0]);

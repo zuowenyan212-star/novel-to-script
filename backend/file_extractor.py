@@ -9,6 +9,7 @@ import re
 from typing import Callable
 from xml.etree import ElementTree
 from zipfile import BadZipFile, ZipFile
+from urllib.parse import unquote
 
 
 SUPPORTED_EXTENSIONS = {".txt", ".md", ".markdown", ".docx", ".pdf"}
@@ -61,6 +62,43 @@ def extract_text_from_file(filename: str, content: bytes) -> ExtractedText:
     return ExtractedText(filename=safe_name, extension=extension, text=cleaned, source_type=source_type)
 
 
+def extract_upload_from_multipart(content_type: str, body: bytes, field_name: str = "file") -> tuple[str, bytes]:
+    """Return filename and bytes from a multipart/form-data request body."""
+    if "multipart/form-data" not in content_type or "boundary=" not in content_type:
+        raise FileExtractionError("文件上传请求格式错误：缺少 multipart/form-data boundary。")
+
+    boundary = _parse_boundary(content_type)
+    if not boundary:
+        raise FileExtractionError("文件上传请求格式错误：boundary 为空。")
+
+    delimiter = ("--" + boundary).encode("utf-8")
+    for raw_part in body.split(delimiter):
+        part = raw_part.strip(b"\r\n")
+        if not part or part == b"--":
+            continue
+        if part.endswith(b"--"):
+            part = part[:-2].rstrip(b"\r\n")
+
+        header_bytes, separator, payload = part.partition(b"\r\n\r\n")
+        if not separator:
+            header_bytes, separator, payload = part.partition(b"\n\n")
+        if not separator:
+            continue
+
+        headers = header_bytes.decode("utf-8", errors="replace")
+        disposition = _content_disposition(headers)
+        if not disposition:
+            continue
+        if _disposition_value(disposition, "name") != field_name:
+            continue
+
+        filename = _disposition_value(disposition, "filename") or _disposition_value(disposition, "filename*")
+        filename = _decode_filename(filename) or "uploaded.txt"
+        return filename, payload.rstrip(b"\r\n")
+
+    raise FileExtractionError("未找到上传文件字段，请确认表单字段名为 file。")
+
+
 def _decode_text(content: bytes) -> str:
     for encoding in ("utf-8-sig", "utf-8", "gb18030", "gbk"):
         try:
@@ -68,6 +106,37 @@ def _decode_text(content: bytes) -> str:
         except UnicodeDecodeError:
             continue
     return content.decode("utf-8", errors="replace")
+
+
+def _parse_boundary(content_type: str) -> str:
+    for part in content_type.split(";"):
+        part = part.strip()
+        if part.lower().startswith("boundary="):
+            return part.split("=", 1)[1].strip().strip('"')
+    return ""
+
+
+def _content_disposition(headers: str) -> str:
+    for line in headers.splitlines():
+        if line.lower().startswith("content-disposition:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+
+def _disposition_value(disposition: str, key: str) -> str:
+    for item in disposition.split(";"):
+        item = item.strip()
+        if item.lower().startswith(key.lower() + "="):
+            return item.split("=", 1)[1].strip().strip('"')
+    return ""
+
+
+def _decode_filename(filename: str) -> str:
+    if not filename:
+        return ""
+    if filename.lower().startswith("utf-8''"):
+        return unquote(filename[7:])
+    return filename
 
 
 def _extract_docx_text(content: bytes) -> str:
@@ -152,4 +221,3 @@ def _clean_text(text: str) -> str:
     normalized = re.sub(r"[ \t]+\n", "\n", normalized)
     normalized = re.sub(r"\n{3,}", "\n\n", normalized)
     return normalized.strip()
-

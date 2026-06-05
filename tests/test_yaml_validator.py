@@ -2,7 +2,7 @@ import os
 import unittest
 
 from backend.chapter_parser import parse_chapters
-from backend.script_generator import generate_local_script, generate_script_payload
+from backend.script_generator import chat_turn_payload, generate_local_script, generate_script_payload
 from backend.yaml_codec import dump_yaml, load_yaml
 from backend.yaml_validator import validate_script_data, validate_yaml_text
 
@@ -51,6 +51,15 @@ class YamlValidatorTest(unittest.TestCase):
         self.assertIn("yaml", result)
         self.assertEqual(result["chapter_count"], 3)
         self.assertEqual(result["model_mode"], "local")
+
+    def test_chat_turn_revises_existing_yaml_locally(self):
+        os.environ["LLM_PROVIDER"] = "mock"
+        generated = generate_script_payload(SAMPLE)
+        revised = chat_turn_payload("把对白更口语化，并加强冲突", existing_yaml=generated["yaml"])
+
+        self.assertTrue(revised["success"], revised.get("error"))
+        self.assertIn("revision_history", revised["yaml"])
+        self.assertIn("强化戏剧冲突", revised["yaml"])
 
 
 if __name__ == "__main__":

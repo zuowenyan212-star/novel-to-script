@@ -14,26 +14,17 @@ from urllib.parse import unquote, urlparse
 
 if __package__ in {None, ""}:  # Support `python backend/dev_server.py`.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from backend.file_extractor import FileExtractionError, extract_text_from_file
+    from backend.file_extractor import FileExtractionError, extract_text_from_file, extract_upload_from_multipart
     from backend.llm_client import LLMConfigurationError, LLMGenerationError
-    from backend.script_generator import generate_script_payload, parse_chapter_payload, validate_yaml_payload
+    from backend.script_generator import chat_turn_payload, generate_script_payload, parse_chapter_payload, validate_yaml_payload
 else:
-    from .file_extractor import FileExtractionError, extract_text_from_file
+    from .file_extractor import FileExtractionError, extract_text_from_file, extract_upload_from_multipart
     from .llm_client import LLMConfigurationError, LLMGenerationError
-    from .script_generator import generate_script_payload, parse_chapter_payload, validate_yaml_payload
+    from .script_generator import chat_turn_payload, generate_script_payload, parse_chapter_payload, validate_yaml_payload
 
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parents[0]
-
-
-def _filename_from_header(header: str) -> str:
-    for item in header.split(";"):
-        item = item.strip()
-        if item.startswith("filename="):
-            return item.split("=", 1)[1].strip().strip('"')
-    return ""
-
 
 class DemoHandler(BaseHTTPRequestHandler):
     server_version = "NovelToScriptDemo/1.0"
@@ -76,6 +67,19 @@ class DemoHandler(BaseHTTPRequestHandler):
                 )
                 self._send_json(result)
                 return
+            if self.path == "/api/chat-turn":
+                self._send_json(
+                    chat_turn_payload(
+                        str(payload.get("message", "")),
+                        existing_yaml=str(payload.get("existing_yaml", "")),
+                        style=str(payload.get("style", "影视剧本")),
+                        language=str(payload.get("language", "zh-CN")),
+                        adaptation_mode=str(payload.get("adaptation_mode", "忠于原文")),
+                        detail_level=str(payload.get("detail_level", "标准")),
+                        model_mode=str(payload.get("model_mode", "local")),
+                    )
+                )
+                return
             if self.path == "/api/validate-yaml":
                 self._send_json(validate_yaml_payload(str(payload.get("yaml_text", "")), bool(payload.get("repair", True))))
                 return
@@ -112,25 +116,8 @@ class DemoHandler(BaseHTTPRequestHandler):
         return data
 
     def _read_multipart_file(self) -> tuple[str, bytes]:
-        content_type = self.headers.get("Content-Type", "")
-        if "multipart/form-data" not in content_type or "boundary=" not in content_type:
-            raise FileExtractionError("文件上传请求格式错误。")
-        boundary = content_type.split("boundary=", 1)[1].strip().strip('"')
-        delimiter = ("--" + boundary).encode("utf-8")
         length = int(self.headers.get("Content-Length", "0"))
-        body = self.rfile.read(length)
-        for part in body.split(delimiter):
-            if b"Content-Disposition:" not in part or b' name="file"' not in part:
-                continue
-            header, _, payload = part.partition(b"\r\n\r\n")
-            if not payload:
-                header, _, payload = part.partition(b"\n\n")
-            filename = _filename_from_header(header.decode("utf-8", errors="replace"))
-            content = payload.rstrip(b"\r\n")
-            if content.endswith(b"--"):
-                content = content[:-2].rstrip(b"\r\n")
-            return filename or "uploaded.txt", content
-        raise FileExtractionError("未找到上传文件字段。")
+        return extract_upload_from_multipart(self.headers.get("Content-Type", ""), self.rfile.read(length))
 
     def _send_json(self, data: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         raw = json.dumps(data, ensure_ascii=False).encode("utf-8")

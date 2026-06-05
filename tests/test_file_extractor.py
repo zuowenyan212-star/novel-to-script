@@ -2,7 +2,7 @@ from io import BytesIO
 import unittest
 from zipfile import ZipFile
 
-from backend.file_extractor import FileExtractionError, extract_text_from_file
+from backend.file_extractor import FileExtractionError, extract_text_from_file, extract_upload_from_multipart
 
 
 def make_docx_bytes(text: str) -> bytes:
@@ -41,7 +41,21 @@ class FileExtractorTest(unittest.TestCase):
         with self.assertRaises(FileExtractionError):
             extract_text_from_file("novel.exe", b"data")
 
+    def test_extracts_file_from_multipart_body(self):
+        boundary = "----NovelBoundary"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="file"; filename="novel.txt"\r\n'
+            "Content-Type: text/plain\r\n\r\n"
+            "第一章\n正文"
+            f"\r\n--{boundary}--\r\n"
+        ).encode("utf-8")
+
+        filename, content = extract_upload_from_multipart(f"multipart/form-data; boundary={boundary}", body)
+
+        self.assertEqual(filename, "novel.txt")
+        self.assertIn("第一章", content.decode("utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()
-

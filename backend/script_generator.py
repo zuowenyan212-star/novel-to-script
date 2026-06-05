@@ -10,7 +10,7 @@ from typing import Any
 from .chapter_parser import Chapter, chapters_to_public, parse_chapters, summarize_text
 from .config import get_settings
 from .llm_client import LLMClient
-from .prompt_templates import build_generation_prompt, build_repair_prompt
+from .prompt_templates import build_generation_prompt, build_repair_prompt, build_revision_prompt
 from .yaml_codec import dump_yaml, load_yaml
 from .yaml_validator import repair_script_data, validate_script_data, validate_yaml_text
 
@@ -77,6 +77,86 @@ def generate_script_payload(
         "provider": settings.llm_provider,
         "model_mode": "llm" if use_remote_llm else "local",
         "model": settings.model if use_remote_llm else "local-demo",
+        "reply": "已根据小说内容生成结构化 YAML 剧本。",
+    }
+
+
+def chat_turn_payload(
+    message: str,
+    existing_yaml: str = "",
+    style: str = "影视剧本",
+    language: str = "zh-CN",
+    adaptation_mode: str = "忠于原文",
+    detail_level: str = "标准",
+    model_mode: str = "local",
+) -> dict[str, Any]:
+    if existing_yaml.strip():
+        return revise_script_payload(
+            existing_yaml=existing_yaml,
+            user_instruction=message,
+            style=style,
+            language=language,
+            adaptation_mode=adaptation_mode,
+            detail_level=detail_level,
+            model_mode=model_mode,
+        )
+    return generate_script_payload(
+        novel_text=message,
+        style=style,
+        language=language,
+        adaptation_mode=adaptation_mode,
+        detail_level=detail_level,
+        model_mode=model_mode,
+    )
+
+
+def revise_script_payload(
+    existing_yaml: str,
+    user_instruction: str,
+    style: str = "影视剧本",
+    language: str = "zh-CN",
+    adaptation_mode: str = "忠于原文",
+    detail_level: str = "标准",
+    model_mode: str = "local",
+) -> dict[str, Any]:
+    if not user_instruction.strip():
+        return {"success": False, "error": "请输入本轮修改要求。"}
+
+    use_remote_llm = model_mode.lower() in {"llm", "large", "remote", "qiniu"}
+    settings = get_settings(provider_override="qiniu" if use_remote_llm else "mock")
+    client = LLMClient(settings)
+
+    if use_remote_llm:
+        prompt = build_revision_prompt(existing_yaml, user_instruction, style, adaptation_mode, detail_level, language)
+        remote_yaml = client.generate(prompt)
+        data, yaml_text = _normalize_remote_yaml(remote_yaml or existing_yaml)
+        validation = validate_script_data(data)
+        if not validation.valid:
+            repair_prompt = build_repair_prompt(yaml_text, validation.errors)
+            repaired_yaml = client.generate(repair_prompt)
+            if repaired_yaml:
+                data, yaml_text = _normalize_remote_yaml(repaired_yaml)
+                validation = validate_script_data(data)
+    else:
+        try:
+            data = load_yaml(existing_yaml)
+        except Exception:
+            data = {}
+        data = _apply_local_revision(repair_script_data(data), user_instruction, style, adaptation_mode, detail_level)
+        validation = validate_script_data(data)
+        yaml_text = dump_yaml(data)
+
+    title = data.get("title", "script_output") if isinstance(data, dict) else "script_output"
+    return {
+        "success": validation.valid,
+        "yaml": yaml_text,
+        "script": data,
+        "validation": validation.as_dict(),
+        "filename": build_download_filename(title),
+        "provider": settings.llm_provider,
+        "model_mode": "llm" if use_remote_llm else "local",
+        "model": settings.model if use_remote_llm else "local-demo",
+        "reply": "已根据你的新要求更新剧本 YAML。",
     }
 
 
@@ -161,6 +241,59 @@ def _normalize_remote_yaml(raw_text: str) -> tuple[dict[str, Any], str]:
         data = repair_script_data(data)
     yaml_text = dump_yaml(data)
     return data, yaml_text
+
+
+def _apply_local_revision(
+    data: dict[str, Any],
+    instruction: str,
+    style: str,
+    adaptation_mode: str,
+    detail_level: str,
+) -> dict[str, Any]:
+    metadata = data.setdefault("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+        data["metadata"] = metadata
+
+    metadata["style"] = style
+    metadata["adaptation_mode"] = adaptation_mode
+    metadata["detail_level"] = detail_level
+    metadata.setdefault("revision_history", [])
+    if not isinstance(metadata["revision_history"], list):
+        metadata["revision_history"] = []
+    metadata["revision_history"].append(
+        {
+            "instruction": instruction.strip(),
+            "applied_by": "local-demo",
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+    )
+
+    title_match = re.search(r"(?:标题|剧名|片名)(?:改成|修改为|设为|叫)\s*[《\"]?([^》\"\n，。,.]{2,30})", instruction)
+    if title_match:
+        data["title"] = title_match.group(1).strip()
+
+    if "口语" in instruction:
+        for scene in data.get("scenes", []):
+            if not isinstance(scene, dict):
+                continue
+            for dialogue in scene.get("dialogue", []):
+                if isinstance(dialogue, dict) and dialogue.get("line") and "。" not in dialogue["line"][-1:]:
+                    dialogue["line"] = str(dialogue["line"]).rstrip("。") + "。"
+                if isinstance(dialogue, dict):
+                    dialogue["emotion"] = dialogue.get("emotion") or "自然"
+
+    if any(word in instruction for word in ["冲突", "悬念", "紧张"]):
+        data["theme"] = str(data.get("theme", "人物选择与转变")) + "；本轮强化戏剧冲突。"
+        scenes = data.get("scenes", [])
+        if isinstance(scenes, list) and scenes:
+            first_scene = scenes[0]
+            if isinstance(first_scene, dict):
+                actions = first_scene.setdefault("action", [])
+                if isinstance(actions, list):
+                    actions.append("人物在新的压力下重新做出选择，场面张力进一步升级。")
+
+    return data
 
 
 def _infer_title(chapters: list[Chapter]) -> str:

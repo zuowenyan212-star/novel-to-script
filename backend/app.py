@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, File, Request, UploadFile
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
-from .file_extractor import FileExtractionError, extract_text_from_file
+from .file_extractor import FileExtractionError, extract_text_from_file, extract_upload_from_multipart
 from .llm_client import LLMConfigurationError, LLMGenerationError
-from .script_generator import generate_script_payload, parse_chapter_payload, validate_yaml_payload
+from .script_generator import chat_turn_payload, generate_script_payload, parse_chapter_payload, validate_yaml_payload
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -28,6 +28,16 @@ class ParseChaptersRequest(BaseModel):
 
 class GenerateScriptRequest(BaseModel):
     novel_text: str
+    style: str = "影视剧本"
+    language: str = "zh-CN"
+    adaptation_mode: str = "忠于原文"
+    detail_level: str = "标准"
+    model_mode: str = "local"
+
+
+class ChatTurnRequest(BaseModel):
+    message: str
+    existing_yaml: str = ""
     style: str = "影视剧本"
     language: str = "zh-CN"
     adaptation_mode: str = "忠于原文"
@@ -57,10 +67,10 @@ def example() -> dict[str, str]:
 
 
 @app.post("/api/extract-text")
-async def extract_text_api(file: UploadFile = File(...)):
+async def extract_text_api(request: Request):
     try:
-        content = await file.read()
-        return extract_text_from_file(file.filename or "uploaded.txt", content).as_dict()
+        filename, content = extract_upload_from_multipart(request.headers.get("content-type", ""), await request.body())
+        return extract_text_from_file(filename, content).as_dict()
     except FileExtractionError as exc:
         return JSONResponse(status_code=400, content={"success": False, "error": str(exc)})
     except Exception as exc:
@@ -89,6 +99,26 @@ def generate_script_api(payload: GenerateScriptRequest):
         return JSONResponse(status_code=502, content={"success": False, "error": str(exc)})
     except Exception as exc:
         return JSONResponse(status_code=500, content={"success": False, "error": f"AI 生成失败：{exc}"})
+
+
+@app.post("/api/chat-turn")
+def chat_turn_api(payload: ChatTurnRequest):
+    try:
+        return chat_turn_payload(
+            payload.message,
+            existing_yaml=payload.existing_yaml,
+            style=payload.style,
+            language=payload.language,
+            adaptation_mode=payload.adaptation_mode,
+            detail_level=payload.detail_level,
+            model_mode=payload.model_mode,
+        )
+    except LLMConfigurationError as exc:
+        return JSONResponse(status_code=400, content={"success": False, "error": str(exc)})
+    except LLMGenerationError as exc:
+        return JSONResponse(status_code=502, content={"success": False, "error": str(exc)})
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"success": False, "error": f"AI 多轮处理失败：{exc}"})
 
 
 @app.post("/api/validate-yaml")

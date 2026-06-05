@@ -61,12 +61,14 @@
               <p>在底部输入框粘贴小说，或上传 Word / PDF / TXT 文件。我会先检查章节数量，再生成可编辑、可校验、可下载的 YAML 剧本。</p>
               <div class="capability-grid">
                 <span>至少 3 个章节</span>
+                <span>支持多轮改稿</span>
                 <span>角色表预览</span>
                 <span>场景列表预览</span>
-                <span>七牛云大模型</span>
               </div>
             </div>
           </article>
+
+          <div class="chat-messages" id="chatMessages"></div>
 
           <article class="message user-message" id="inputSummaryMessage" hidden>
             <div class="avatar">你</div>
@@ -179,7 +181,7 @@
                 </label>
               </div>
 
-              <button class="primary-button" id="generateButton" type="button" disabled>生成剧本</button>
+              <button class="primary-button" id="generateButton" type="button" disabled aria-label="发送">发送</button>
             </div>
           </div>
 
