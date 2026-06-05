@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ app_name }}</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header class="page-header">
+    <div>
+      <h1>AI 小说转剧本工具</h1>
+      <p>将 3 章以上小说文本自动转换为结构化 YAML 剧本</p>
+    </div>
+    <span class="badge">MVP Demo{% if mock_mode %} · Mock模式{% endif %}</span>
+  </header>
+
+  <main class="layout">
+    <section class="card input-card">
+      <div class="card-title">
+        <h2>小说文本输入</h2>
+        <button id="fillExampleBtn" class="secondary">一键填入示例</button>
+      </div>
+
+      <textarea id="novelText" placeholder="请粘贴至少 3 个章节的小说文本，例如：第一章……第二章……第三章……"></textarea>
+
+      <div class="stats">
+        <span>字数：<strong id="wordCount">0</strong></span>
+        <span>章节数：<strong id="chapterCount">0</strong></span>
+        <span id="chapterHint" class="hint">请至少输入 3 个章节</span>
+      </div>
+
+      <div class="form-row">
+        <label>
+          剧本类型
+          <select id="style">
+            <option value="影视剧本">影视剧本</option>
+            <option value="短剧剧本">短剧剧本</option>
+            <option value="舞台剧剧本">舞台剧剧本</option>
+          </select>
+        </label>
+        <label>
+          输出语言
+          <select id="language">
+            <option value="zh-CN">中文</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="generateBtn" class="primary" disabled>生成剧本</button>
+      <p id="statusText" class="status"></p>
+
+      <div class="chapter-list">
+        <h3>章节检测结果</h3>
+        <ul id="chapterList"></ul>
+      </div>
+    </section>
+
+    <section class="card result-card">
+      <div class="card-title">
+        <h2>YAML 剧本预览</h2>
+        <div class="actions">
+          <button id="copyBtn" class="secondary" disabled>复制 YAML</button>
+          <button id="downloadBtn" class="secondary" disabled>下载 YAML</button>
+        </div>
+      </div>
+
+      <div id="validationBox" class="validation">等待生成结果</div>
+      <pre id="yamlOutput"></pre>
+
+      <div class="preview-grid">
+        <div>
+          <h3>角色表预览</h3>
+          <ul id="characterPreview"></ul>
+        </div>
+        <div>
+          <h3>场景列表预览</h3>
+          <ul id="scenePreview"></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>
