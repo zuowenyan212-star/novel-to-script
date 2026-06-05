@@ -86,11 +86,11 @@ LLM_MODEL=gpt-4o-mini
 ```env
 LLM_PROVIDER=qiniu
 QINIU_API_KEY=your_qiniu_api_key_here
-QINIU_BASE_URL=https://openai.qiniu.com/v1
+QINIU_BASE_URL=https://api.qnaigc.com/v1
 QINIU_MODEL=deepseek-v3
 ```
 
-如果控制台显示模型名不同，以七牛云模型广场中的模型 ID 为准。DeepSeek、通义千问等其他 OpenAI 兼容接口只需要替换 `LLM_BASE_URL`、`LLM_MODEL` 和 API Key。
+页面中的“普通模型（本地）”不调用 API，适合无网络演示；“大模型（七牛云）”会调用 `https://api.qnaigc.com/v1/chat/completions`。如果控制台显示模型名不同，以七牛云模型列表中的模型 ID 为准。DeepSeek、通义千问等其他 OpenAI 兼容接口只需要替换 `LLM_BASE_URL`、`LLM_MODEL` 和 API Key。
 
 ## 测试
 

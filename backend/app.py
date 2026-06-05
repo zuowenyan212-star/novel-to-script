@@ -32,6 +32,7 @@ class GenerateScriptRequest(BaseModel):
     language: str = "zh-CN"
     adaptation_mode: str = "忠于原文"
     detail_level: str = "标准"
+    model_mode: str = "local"
 
 
 class ValidateYamlRequest(BaseModel):
@@ -69,6 +70,7 @@ def generate_script_api(payload: GenerateScriptRequest):
             language=payload.language,
             adaptation_mode=payload.adaptation_mode,
             detail_level=payload.detail_level,
+            model_mode=payload.model_mode,
         )
     except LLMConfigurationError as exc:
         return JSONResponse(status_code=400, content={"success": False, "error": str(exc)})
@@ -81,4 +83,3 @@ def generate_script_api(payload: GenerateScriptRequest):
 @app.post("/api/validate-yaml")
 def validate_yaml_api(payload: ValidateYamlRequest) -> dict[str, object]:
     return validate_yaml_payload(payload.yaml_text, repair=payload.repair)
-

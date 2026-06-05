@@ -50,8 +50,8 @@ class YamlValidatorTest(unittest.TestCase):
         self.assertTrue(result["success"], result.get("error"))
         self.assertIn("yaml", result)
         self.assertEqual(result["chapter_count"], 3)
+        self.assertEqual(result["model_mode"], "local")
 
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 from .config import Settings
 from .prompt_templates import SYSTEM_PROMPT
@@ -38,6 +38,8 @@ class LLMClient:
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.35,
+            "stream": False,
+            "max_tokens": 4096,
         }
         request = Request(
             url,
@@ -49,13 +51,15 @@ class LLMClient:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=self.settings.request_timeout) as response:
+            opener = None if self.settings.use_system_proxy else build_opener(ProxyHandler({}))
+            open_request = urlopen if opener is None else opener.open
+            with open_request(request, timeout=self.settings.request_timeout) as response:
                 data = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
             raise LLMGenerationError(f"大模型接口返回错误：HTTP {exc.code} {detail}") from exc
         except URLError as exc:
-            raise LLMGenerationError(f"大模型接口连接失败：{exc.reason}") from exc
+            raise LLMGenerationError(f"大模型接口连接失败：{exc.reason}；请检查 LLM_BASE_URL 是否为 https://api.qnaigc.com/v1。") from exc
         except Exception as exc:
             raise LLMGenerationError(f"大模型调用失败：{exc}") from exc
 
@@ -63,4 +67,3 @@ class LLMClient:
             return data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMGenerationError("大模型返回结构异常，未找到 choices[0].message.content。") from exc
-

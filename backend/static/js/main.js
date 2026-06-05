@@ -21,6 +21,7 @@ const els = {
   validationBox: document.querySelector("#validationBox"),
   validationSummary: document.querySelector("#validationSummary"),
   providerBadge: document.querySelector("#providerBadge"),
+  modelModeSelect: document.querySelector("#modelModeSelect"),
   styleSelect: document.querySelector("#styleSelect"),
   modeSelect: document.querySelector("#modeSelect"),
   detailSelect: document.querySelector("#detailSelect"),
@@ -138,6 +139,7 @@ async function generateScript() {
       language: "zh-CN",
       adaptation_mode: els.modeSelect.value,
       detail_level: els.detailSelect.value,
+      model_mode: els.modelModeSelect.value,
     });
     if (!data.success) {
       throw new Error(data.error || "生成结果未通过校验");
@@ -145,7 +147,7 @@ async function generateScript() {
     state.yaml = data.yaml || "";
     state.script = data.script || null;
     state.filename = data.filename || "script_output.yaml";
-    els.providerBadge.textContent = data.provider === "mock" ? "本地演示模式" : data.provider;
+    els.providerBadge.textContent = data.model_mode === "llm" ? `七牛云大模型：${data.model || ""}` : "普通模型（本地）";
     els.yamlOutput.textContent = state.yaml;
     setValidation(data.validation);
     renderPreview(state.script);
@@ -262,4 +264,3 @@ els.validateButton.addEventListener("click", validateYaml);
 els.copyButton.addEventListener("click", copyYaml);
 els.downloadButton.addEventListener("click", downloadYaml);
 updateBasicStats();
-

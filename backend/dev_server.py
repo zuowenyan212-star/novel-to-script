@@ -57,6 +57,7 @@ class DemoHandler(BaseHTTPRequestHandler):
                     language=str(payload.get("language", "zh-CN")),
                     adaptation_mode=str(payload.get("adaptation_mode", "忠于原文")),
                     detail_level=str(payload.get("detail_level", "标准")),
+                    model_mode=str(payload.get("model_mode", "local")),
                 )
                 self._send_json(result)
                 return

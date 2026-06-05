@@ -191,7 +191,7 @@ select:focus {
 
 .control-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -448,4 +448,3 @@ tr:last-child td {
     flex: 1 1 0;
   }
 }
-

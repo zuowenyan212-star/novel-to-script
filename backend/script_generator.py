@@ -34,6 +34,7 @@ def generate_script_payload(
     language: str = "zh-CN",
     adaptation_mode: str = "忠于原文",
     detail_level: str = "标准",
+    model_mode: str = "local",
 ) -> dict[str, Any]:
     chapters = parse_chapters(novel_text)
     if len(chapters) < MIN_CHAPTERS:
@@ -44,10 +45,11 @@ def generate_script_payload(
             "chapters": chapters_to_public(chapters),
         }
 
-    settings = get_settings()
+    use_remote_llm = model_mode.lower() in {"llm", "large", "remote", "qiniu"}
+    settings = get_settings(provider_override="qiniu" if use_remote_llm else "mock")
     client = LLMClient(settings)
     prompt = build_generation_prompt(novel_text, chapters, style, adaptation_mode, detail_level, language)
-    remote_yaml = client.generate(prompt)
+    remote_yaml = client.generate(prompt) if use_remote_llm else None
 
     if remote_yaml:
         data, yaml_text = _normalize_remote_yaml(remote_yaml)
@@ -73,6 +75,8 @@ def generate_script_payload(
         "chapters": chapters_to_public(chapters),
         "filename": filename,
         "provider": settings.llm_provider,
+        "model_mode": "llm" if use_remote_llm else "local",
+        "model": settings.model if use_remote_llm else "local-demo",
     }
 
 
@@ -334,4 +338,3 @@ def _name_for_id(character_id: str, characters: list[dict[str, str]]) -> str:
 def _append_unique(items: list[str], value: str) -> None:
     if value and value not in items:
         items.append(value)
-
