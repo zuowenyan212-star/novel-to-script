@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
+from .file_extractor import FileExtractionError, extract_text_from_file
 from .llm_client import LLMConfigurationError, LLMGenerationError
 from .script_generator import generate_script_payload, parse_chapter_payload, validate_yaml_payload
 
@@ -54,6 +54,17 @@ def health() -> dict[str, str]:
 def example() -> dict[str, str]:
     sample_path = BASE_DIR.parents[0] / "examples" / "novel_sample.txt"
     return {"novel_text": sample_path.read_text(encoding="utf-8")}
+
+
+@app.post("/api/extract-text")
+async def extract_text_api(file: UploadFile = File(...)):
+    try:
+        content = await file.read()
+        return extract_text_from_file(file.filename or "uploaded.txt", content).as_dict()
+    except FileExtractionError as exc:
+        return JSONResponse(status_code=400, content={"success": False, "error": str(exc)})
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"success": False, "error": f"文件识别失败：{exc}"})
 
 
 @app.post("/api/parse-chapters")

@@ -14,15 +14,25 @@ from urllib.parse import unquote, urlparse
 
 if __package__ in {None, ""}:  # Support `python backend/dev_server.py`.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from backend.file_extractor import FileExtractionError, extract_text_from_file
     from backend.llm_client import LLMConfigurationError, LLMGenerationError
     from backend.script_generator import generate_script_payload, parse_chapter_payload, validate_yaml_payload
 else:
+    from .file_extractor import FileExtractionError, extract_text_from_file
     from .llm_client import LLMConfigurationError, LLMGenerationError
     from .script_generator import generate_script_payload, parse_chapter_payload, validate_yaml_payload
 
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parents[0]
+
+
+def _filename_from_header(header: str) -> str:
+    for item in header.split(";"):
+        item = item.strip()
+        if item.startswith("filename="):
+            return item.split("=", 1)[1].strip().strip('"')
+    return ""
 
 
 class DemoHandler(BaseHTTPRequestHandler):
@@ -46,6 +56,11 @@ class DemoHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         try:
+            if self.path == "/api/extract-text":
+                filename, content = self._read_multipart_file()
+                self._send_json(extract_text_from_file(filename, content).as_dict())
+                return
+
             payload = self._read_json()
             if self.path == "/api/parse-chapters":
                 self._send_json(parse_chapter_payload(str(payload.get("novel_text", ""))))
@@ -69,6 +84,8 @@ class DemoHandler(BaseHTTPRequestHandler):
             self._send_json({"success": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
         except LLMGenerationError as exc:
             self._send_json({"success": False, "error": str(exc)}, status=HTTPStatus.BAD_GATEWAY)
+        except FileExtractionError as exc:
+            self._send_json({"success": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
         except Exception as exc:
             self._send_json({"success": False, "error": f"请求处理失败：{exc}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
@@ -93,6 +110,27 @@ class DemoHandler(BaseHTTPRequestHandler):
         if not isinstance(data, dict):
             raise ValueError("JSON 请求体必须是对象。")
         return data
+
+    def _read_multipart_file(self) -> tuple[str, bytes]:
+        content_type = self.headers.get("Content-Type", "")
+        if "multipart/form-data" not in content_type or "boundary=" not in content_type:
+            raise FileExtractionError("文件上传请求格式错误。")
+        boundary = content_type.split("boundary=", 1)[1].strip().strip('"')
+        delimiter = ("--" + boundary).encode("utf-8")
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length)
+        for part in body.split(delimiter):
+            if b"Content-Disposition:" not in part or b' name="file"' not in part:
+                continue
+            header, _, payload = part.partition(b"\r\n\r\n")
+            if not payload:
+                header, _, payload = part.partition(b"\n\n")
+            filename = _filename_from_header(header.decode("utf-8", errors="replace"))
+            content = payload.rstrip(b"\r\n")
+            if content.endswith(b"--"):
+                content = content[:-2].rstrip(b"\r\n")
+            return filename or "uploaded.txt", content
+        raise FileExtractionError("未找到上传文件字段。")
 
     def _send_json(self, data: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         raw = json.dumps(data, ensure_ascii=False).encode("utf-8")

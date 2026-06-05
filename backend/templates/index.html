@@ -7,127 +7,184 @@
     <link rel="stylesheet" href="/static/css/style.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Novel to YAML Script</p>
-          <h1>AI 小说转剧本工具</h1>
+    <div class="chat-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">剧</div>
+          <div>
+            <h1>AI 小说转剧本</h1>
+            <p>Novel to YAML Script</p>
+          </div>
         </div>
-        <div class="run-badge" id="providerBadge">本地演示模式</div>
-      </header>
 
-      <main class="workspace">
-        <section class="panel input-panel" aria-labelledby="inputTitle">
-          <div class="panel-head">
-            <div>
-              <h2 id="inputTitle">小说文本</h2>
-              <p id="chapterHint">当前 0 个章节</p>
+        <button class="new-chat-button" id="newChatButton" type="button">新聊天</button>
+
+        <nav class="side-nav" aria-label="项目功能">
+          <h2>工作流</h2>
+          <span>导入小说文本</span>
+          <span>识别章节结构</span>
+          <span>生成 YAML 剧本</span>
+          <span>校验并下载结果</span>
+        </nav>
+
+        <section class="history-panel" aria-labelledby="historyTitle">
+          <h2 id="historyTitle">最近记录</h2>
+          <div class="history-list" id="historyList">
+            <p>暂无生成记录</p>
+          </div>
+        </section>
+
+        <div class="sidebar-footer">
+          <div class="provider-pill" id="providerBadge">普通模型（本地）</div>
+          <p>记录保存在当前浏览器本地。</p>
+        </div>
+      </aside>
+
+      <main class="chat-main">
+        <header class="chat-header">
+          <div>
+            <p class="eyebrow">Script Generation Workspace</p>
+            <h2>把小说内容交给我，输出结构化剧本</h2>
+          </div>
+          <div class="header-actions">
+            <button class="ghost-button" id="validateButton" type="button" disabled>校验</button>
+            <button class="ghost-button" id="copyButton" type="button" disabled>复制</button>
+            <button class="ghost-button" id="downloadButton" type="button" disabled>下载 YAML</button>
+          </div>
+        </header>
+
+        <section class="conversation" id="conversation" aria-live="polite">
+          <article class="message assistant-message intro-message">
+            <div class="avatar">AI</div>
+            <div class="message-body">
+              <h3>开始一次小说改编</h3>
+              <p>在底部输入框粘贴小说，或上传 Word / PDF / TXT 文件。我会先检查章节数量，再生成可编辑、可校验、可下载的 YAML 剧本。</p>
+              <div class="capability-grid">
+                <span>至少 3 个章节</span>
+                <span>角色表预览</span>
+                <span>场景列表预览</span>
+                <span>七牛云大模型</span>
+              </div>
             </div>
-            <button class="ghost-button" id="loadExampleButton" type="button">填入示例</button>
+          </article>
+
+          <article class="message user-message" id="inputSummaryMessage" hidden>
+            <div class="avatar">你</div>
+            <div class="message-body">
+              <h3>待改编小说</h3>
+              <p id="inputSummaryText">尚未输入文本。</p>
+            </div>
+          </article>
+
+          <article class="message assistant-message result-message" id="resultMessage" hidden>
+            <div class="avatar">AI</div>
+            <div class="message-body">
+              <div class="result-head">
+                <div>
+                  <h3>生成结果</h3>
+                  <p id="validationSummary">等待生成</p>
+                </div>
+                <div class="view-tabs" role="tablist">
+                  <button class="tab-button active" data-view="yaml" type="button">YAML</button>
+                  <button class="tab-button" data-view="characters" type="button">角色表</button>
+                  <button class="tab-button" data-view="scenes" type="button">场景列表</button>
+                </div>
+              </div>
+
+              <div class="validation-box" id="validationBox">暂无校验结果</div>
+
+              <div class="view active" id="yamlView">
+                <pre id="yamlOutput">生成后的 YAML 会显示在这里。</pre>
+              </div>
+
+              <div class="view" id="charactersView">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>姓名</th>
+                      <th>角色</th>
+                      <th>目标</th>
+                    </tr>
+                  </thead>
+                  <tbody id="characterRows"></tbody>
+                </table>
+              </div>
+
+              <div class="view" id="scenesView">
+                <div class="scene-list" id="sceneList"></div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <footer class="composer-area">
+          <div class="drop-zone" id="dropZone">
+            可拖拽 .txt / .docx / .pdf 文件到这里，或使用下方上传按钮。
           </div>
 
-          <textarea
-            id="novelInput"
-            spellcheck="false"
-            placeholder="第一章 雨夜重逢&#10;……&#10;&#10;第二章 旧仓库&#10;……&#10;&#10;第三章 天台黎明&#10;……"
-          ></textarea>
+          <div class="composer">
+            <textarea
+              id="novelInput"
+              spellcheck="false"
+              placeholder="粘贴 3 个章节以上的小说文本，或上传 Word / PDF / TXT 文件..."
+            ></textarea>
 
-          <div class="metrics" aria-live="polite">
-            <div>
-              <span class="metric-label">字数</span>
-              <strong id="wordCount">0</strong>
+            <div class="composer-meta" aria-live="polite">
+              <span id="chapterHint">当前 0 个章节</span>
+              <span>字数 <strong id="wordCount">0</strong></span>
+              <span>章节 <strong id="chapterCount">0</strong></span>
+              <span>状态 <strong id="inputStatus">待输入</strong></span>
             </div>
-            <div>
-              <span class="metric-label">章节</span>
-              <strong id="chapterCount">0</strong>
-            </div>
-            <div>
-              <span class="metric-label">状态</span>
-              <strong id="inputStatus">待输入</strong>
+
+            <div class="composer-controls">
+              <div class="quick-actions">
+                <button class="ghost-button" id="pasteClipboardButton" type="button">读取剪贴板</button>
+                <button class="ghost-button" id="uploadFileButton" type="button">上传文件</button>
+                <button class="ghost-button" id="loadExampleButton" type="button">填入示例</button>
+                <input id="fileInput" type="file" accept=".txt,.md,.markdown,.docx,.pdf" hidden />
+              </div>
+
+              <div class="select-row">
+                <label>
+                  <span>生成模型</span>
+                  <select id="modelModeSelect">
+                    <option value="local">普通模型（本地）</option>
+                    <option value="llm">大模型（七牛云）</option>
+                  </select>
+                </label>
+                <label>
+                  <span>剧本类型</span>
+                  <select id="styleSelect">
+                    <option>影视剧本</option>
+                    <option>短剧剧本</option>
+                    <option>舞台剧剧本</option>
+                  </select>
+                </label>
+                <label>
+                  <span>改编风格</span>
+                  <select id="modeSelect">
+                    <option>忠于原文</option>
+                    <option>增强戏剧冲突</option>
+                    <option>对白更口语化</option>
+                  </select>
+                </label>
+                <label>
+                  <span>详细程度</span>
+                  <select id="detailSelect">
+                    <option>标准</option>
+                    <option>简洁</option>
+                    <option>详细</option>
+                  </select>
+                </label>
+              </div>
+
+              <button class="primary-button" id="generateButton" type="button" disabled>生成剧本</button>
             </div>
           </div>
 
-          <div class="control-grid">
-            <label>
-              <span>生成模型</span>
-              <select id="modelModeSelect">
-                <option value="local">普通模型（本地）</option>
-                <option value="llm">大模型（七牛云）</option>
-              </select>
-            </label>
-            <label>
-              <span>剧本类型</span>
-              <select id="styleSelect">
-                <option>影视剧本</option>
-                <option>短剧剧本</option>
-                <option>舞台剧剧本</option>
-              </select>
-            </label>
-            <label>
-              <span>改编风格</span>
-              <select id="modeSelect">
-                <option>忠于原文</option>
-                <option>增强戏剧冲突</option>
-                <option>对白更口语化</option>
-              </select>
-            </label>
-            <label>
-              <span>场景详细程度</span>
-              <select id="detailSelect">
-                <option>标准</option>
-                <option>简洁</option>
-                <option>详细</option>
-              </select>
-            </label>
-          </div>
-
-          <button class="primary-button" id="generateButton" type="button" disabled>生成剧本</button>
           <div class="notice" id="notice" role="status"></div>
-        </section>
-
-        <section class="panel output-panel" aria-labelledby="outputTitle">
-          <div class="panel-head">
-            <div>
-              <h2 id="outputTitle">生成结果</h2>
-              <p id="validationSummary">等待生成</p>
-            </div>
-            <div class="button-row">
-              <button class="ghost-button" id="validateButton" type="button" disabled>校验</button>
-              <button class="ghost-button" id="copyButton" type="button" disabled>复制</button>
-              <button class="ghost-button" id="downloadButton" type="button" disabled>下载 YAML</button>
-            </div>
-          </div>
-
-          <div class="view-tabs" role="tablist">
-            <button class="tab-button active" data-view="yaml" type="button">YAML</button>
-            <button class="tab-button" data-view="characters" type="button">角色表</button>
-            <button class="tab-button" data-view="scenes" type="button">场景列表</button>
-          </div>
-
-          <div class="validation-box" id="validationBox">暂无校验结果</div>
-
-          <div class="view active" id="yamlView">
-            <pre id="yamlOutput">生成后的 YAML 会显示在这里。</pre>
-          </div>
-
-          <div class="view" id="charactersView">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>姓名</th>
-                  <th>角色</th>
-                  <th>目标</th>
-                </tr>
-              </thead>
-              <tbody id="characterRows"></tbody>
-            </table>
-          </div>
-
-          <div class="view" id="scenesView">
-            <div class="scene-list" id="sceneList"></div>
-          </div>
-        </section>
+        </footer>
       </main>
     </div>
     <script src="/static/js/main.js"></script>

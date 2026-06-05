@@ -31,6 +31,8 @@
 
 | 能力 | 说明 |
 | --- | --- |
+| 聊天式工作台 | 左侧项目与历史记录，中间对话输出，底部输入与上传 |
+| 多源输入 | 支持手动粘贴、读取剪贴板、上传 `.txt/.docx/.pdf` 文件 |
 | 多章节识别 | 支持 `第一章`、`第1章`、`Chapter 1`、`一、开端` 等常见章节格式 |
 | 双模式生成 | `普通模型（本地）` 可离线演示，`大模型（七牛云）` 调用真实 AI |
 | 结构化剧本 | 自动输出角色表、场景列表、动作、对白、情绪和转场 |
@@ -42,7 +44,7 @@
 
 ```mermaid
 flowchart LR
-  A[粘贴多章节小说] --> B[章节识别与字数统计]
+  A[粘贴/剪贴板/上传文件] --> B[文本识别与章节统计]
   B --> C{章节数 >= 3?}
   C -- 否 --> D[提示补充内容]
   C -- 是 --> E[选择普通模型或七牛云大模型]
@@ -112,6 +114,9 @@ LLM_USE_SYSTEM_PROXY=false
 <details open>
 <summary><strong>小说输入与章节解析</strong></summary>
 
+- 支持直接粘贴小说文本
+- 支持一键读取剪贴板文本
+- 支持上传 `.txt/.docx/.pdf` 并自动提取正文
 - 实时统计字数与章节数量
 - 自动拆分章节 ID、标题、正文、字数和摘要
 - 少于 3 个章节时禁止生成并给出清晰提示
@@ -170,6 +175,7 @@ tests/
 | --- | --- | --- |
 | `GET` | `/` | 返回网页首页 |
 | `GET` | `/api/example` | 读取示例小说 |
+| `POST` | `/api/extract-text` | 从 `.txt/.docx/.pdf` 上传文件中提取文本 |
 | `POST` | `/api/parse-chapters` | 解析章节数量与章节信息 |
 | `POST` | `/api/generate-script` | 生成 YAML 剧本 |
 | `POST` | `/api/validate-yaml` | 校验 YAML 是否符合 Schema |
@@ -198,6 +204,7 @@ python -m unittest discover -s tests
 当前覆盖：
 
 - 章节识别
+- 文本文件与 Word 文件提取
 - YAML 生成与校验
 - 七牛云默认配置
 - 错误 base_url 自动归一化
@@ -223,6 +230,19 @@ python -m unittest discover -s tests
 LLM_BASE_URL=https://api.qnaigc.com/v1
 LLM_USE_SYSTEM_PROXY=false
 ```
+
+</details>
+
+<details>
+<summary><strong>PDF 上传后提示无法识别</strong></summary>
+
+PDF 解析依赖 `pypdf`。请先安装依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+如果 PDF 是扫描图片，普通 PDF 文本解析无法识别，需要先 OCR。
 
 </details>
 
