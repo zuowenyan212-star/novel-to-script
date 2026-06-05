@@ -1,2 +1,22 @@
-# novel-to-script
-Adapting AI-generated fiction into a screenplay
+# AI 小说转剧本工具
+
+本项目选择比赛题目三：AI 小说转剧本工具。
+
+项目目标是将 3 个章节以上的小说文本自动转换为结构化 YAML 剧本，帮助小说作者快速获得可编辑、可继续打磨的剧本初稿。
+
+## 当前状态
+
+项目已完成基础目录初始化，后续将逐步实现：
+
+- 多章节小说文本输入
+- 自动提取角色、场景、动作和对白
+- 生成符合自定义 Schema 的 YAML 剧本
+- 前端页面展示和下载 YAML 文件
+
+## 项目结构
+
+```text
+frontend/      前端页面
+backend/       后端接口
+docs/          Schema 文档和产品说明
+test-samples/  测试小说文本
