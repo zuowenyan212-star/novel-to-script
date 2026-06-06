@@ -32,11 +32,12 @@ ROOT_DIR = BASE_DIR.parent
 EXAMPLE_PATH = ROOT_DIR / "examples" / "novel_sample.txt"
 
 settings = get_settings()
+APP_VERSION = "0.4.0"
 
 app = FastAPI(
     title=settings.app_name,
     description="将 3 个章节以上小说文本转换为结构化 YAML 剧本。",
-    version="1.4.0",
+    version=APP_VERSION,
 )
 
 app.add_middleware(
@@ -67,7 +68,7 @@ async def index(request: Request):
 async def health():
     return {
         "status": "ok",
-        "version": "1.4.0",
+        "version": APP_VERSION,
         "default_provider": settings.llm_provider,
         "default_model": settings.llm_model,
         "mock_mode": settings.use_mock_llm,

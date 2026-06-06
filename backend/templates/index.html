@@ -10,12 +10,19 @@
   <div id="toastWrap" class="toast-wrap"></div>
 
   <header class="hero">
-    <div>
-      <div class="eyebrow">XEngineer · AI 小说转剧本工具 v0.4</div>
+    <div class="hero-orb hero-orb-one"></div>
+    <div class="hero-orb hero-orb-two"></div>
+    <div class="hero-copy">
+      <div class="eyebrow">XEngineer · AI 创作工作台 · v0.4</div>
       <h1>AI 小说转剧本工具</h1>
       <p>支持关系冲突图谱、AI 分镜建议、角色情绪捕获、场景提示词和多种改编风格。</p>
+      <div class="hero-tags" aria-label="核心能力">
+        <span>YAML Schema 1.1</span>
+        <span>关系语义图谱</span>
+        <span>AI 短片辅助</span>
+      </div>
     </div>
-    <span class="badge">v0.4 增强版</span>
+    <span class="badge"><small>当前版本</small>v0.4</span>
   </header>
 
   <main class="page">
@@ -130,23 +137,75 @@
     <section class="card preview-card">
       <div class="card-title">
         <div>
+          <span class="section-kicker">STRUCTURED DATA</span>
           <h2>结构化预览</h2>
-          <p>章节划分已保留在最终 YAML 的 chapter_scripts 字段中；这里仅预览角色、场景和台词索引，避免重复拆分展示。</p>
+          <p>章节划分保留在 <code>chapter_scripts</code> 中；下方以数据表集中展示角色、场景和台词索引。</p>
         </div>
       </div>
 
       <div class="preview-grid preview-grid-v03">
-        <div>
-          <h3>角色表预览</h3>
-          <ul id="characterPreview"></ul>
+        <div class="data-panel">
+          <div class="data-panel-head">
+            <div>
+              <span class="data-index">01</span>
+              <h3>角色表</h3>
+            </div>
+            <span id="characterCountBadge" class="count-badge">0 条</span>
+          </div>
+          <div class="table-shell">
+            <table class="data-table character-table">
+              <thead>
+                <tr>
+                  <th scope="col">角色 ID</th>
+                  <th scope="col">角色</th>
+                  <th scope="col">定位</th>
+                </tr>
+              </thead>
+              <tbody id="characterPreview"></tbody>
+            </table>
+          </div>
         </div>
-        <div>
-          <h3>场景列表预览</h3>
-          <ul id="scenePreview"></ul>
+        <div class="data-panel">
+          <div class="data-panel-head">
+            <div>
+              <span class="data-index">02</span>
+              <h3>场景表</h3>
+            </div>
+            <span id="sceneCountBadge" class="count-badge">0 条</span>
+          </div>
+          <div class="table-shell">
+            <table class="data-table scene-table">
+              <thead>
+                <tr>
+                  <th scope="col">场景</th>
+                  <th scope="col">来源章节</th>
+                  <th scope="col">地点</th>
+                </tr>
+              </thead>
+              <tbody id="scenePreview"></tbody>
+            </table>
+          </div>
         </div>
-        <div>
-          <h3>台词索引预览</h3>
-          <ul id="dialoguePreview"></ul>
+        <div class="data-panel dialogue-panel">
+          <div class="data-panel-head">
+            <div>
+              <span class="data-index">03</span>
+              <h3>台词索引</h3>
+            </div>
+            <span id="dialogueCountBadge" class="count-badge">0 条</span>
+          </div>
+          <div class="table-shell">
+            <table class="data-table dialogue-table">
+              <thead>
+                <tr>
+                  <th scope="col">场次</th>
+                  <th scope="col">角色</th>
+                  <th scope="col">台词</th>
+                </tr>
+              </thead>
+              <tbody id="dialoguePreview"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
