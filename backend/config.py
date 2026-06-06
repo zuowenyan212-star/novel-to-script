@@ -1,9 +1,14 @@
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from dotenv import load_dotenv
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+except Exception:
+    load_dotenv = None
+
+if load_dotenv is not None:
+    load_dotenv()
 
 
 def _to_bool(value: str | None, default: bool = False) -> bool:

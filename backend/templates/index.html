@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ app_name }}</title>
+  <title>AI 小说转剧本工具</title>
   <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
@@ -11,11 +11,11 @@
 
   <header class="hero">
     <div>
-      <div class="eyebrow">XEngineer · AI 小说转剧本工具</div>
+      <div class="eyebrow">XEngineer · AI 小说转剧本工具 v0.3</div>
       <h1>AI 小说转剧本工具</h1>
-      <p>支持粘贴、TXT、Word、图片输入，生成结构化 YAML 剧本，并自动展示人物关系图谱。</p>
+      <p>支持快速启动、YAML 在线编辑、修改历史、按章节组织剧本、台词索引和多种改编风格。</p>
     </div>
-    <span class="badge">增强版 Demo{% if mock_mode %} · Mock兼容{% endif %}</span>
+    <span class="badge">v0.3 增强版</span>
   </header>
 
   <main class="page">
@@ -26,13 +26,23 @@
           <option value="local">本地演示模型</option>
           <option value="qiniu">七牛云 API</option>
         </select>
-        <p class="tool-hint">本地模型无需 API Key，适合比赛现场保底演示。</p>
+        <p class="tool-hint">本地模型无需 API Key，适合 GitHub 下载后快速体验。</p>
       </div>
 
       <div class="tool-card">
         <label for="modelSelect">模型选择</label>
         <select id="modelSelect"></select>
         <p class="tool-hint">七牛云模型名可在 .env 中配置。</p>
+      </div>
+
+      <div class="tool-card">
+        <label for="adaptationStyle">改编风格</label>
+        <select id="adaptationStyle">
+          <option value="faithful">忠于原文</option>
+          <option value="dramatic">增强戏剧冲突化</option>
+          <option value="colloquial">口语化</option>
+        </select>
+        <p class="tool-hint">生成时会影响场景张力、台词表达和转场风格。</p>
       </div>
 
       <div class="tool-card">
@@ -93,29 +103,52 @@
       <section class="card result-card">
         <div class="card-title">
           <div>
-            <h2>YAML 剧本预览</h2>
-            <p>支持复制、下载，并进行基础 Schema 校验。</p>
+            <h2>YAML 剧本编辑器</h2>
+            <p>生成结果可直接编辑，复制和下载会使用编辑后的版本。</p>
           </div>
           <div class="actions">
+            <button id="validateEditBtn" class="secondary" disabled>校验编辑版</button>
+            <button id="restoreBtn" class="secondary" disabled>恢复生成版</button>
             <button id="copyBtn" class="secondary" disabled>复制 YAML</button>
             <button id="downloadBtn" class="secondary" disabled>下载 YAML</button>
           </div>
         </div>
 
         <div id="validationBox" class="validation">等待生成结果</div>
-        <pre id="yamlOutput">生成后的 YAML 剧本会显示在这里。</pre>
+        <textarea id="yamlEditor" class="yaml-editor" placeholder="生成后的 YAML 剧本会显示在这里，可直接编辑。"></textarea>
 
-        <div class="preview-grid">
-          <div>
-            <h3>角色表预览</h3>
-            <ul id="characterPreview"></ul>
+        <div class="history-panel">
+          <div class="sub-title">
+            <h3>修改历史</h3>
+            <button id="clearHistoryBtn" class="mini-button" disabled>清空记录</button>
           </div>
-          <div>
-            <h3>场景列表预览</h3>
-            <ul id="scenePreview"></ul>
-          </div>
+          <ul id="historyList"></ul>
         </div>
       </section>
+    </section>
+
+    <section class="card preview-card">
+      <div class="card-title">
+        <div>
+          <h2>结构化预览</h2>
+          <p>章节划分已保留在最终 YAML 的 chapter_scripts 字段中；这里仅预览角色、场景和台词索引，避免重复拆分展示。</p>
+        </div>
+      </div>
+
+      <div class="preview-grid preview-grid-v03">
+        <div>
+          <h3>角色表预览</h3>
+          <ul id="characterPreview"></ul>
+        </div>
+        <div>
+          <h3>场景列表预览</h3>
+          <ul id="scenePreview"></ul>
+        </div>
+        <div>
+          <h3>台词索引预览</h3>
+          <ul id="dialoguePreview"></ul>
+        </div>
+      </div>
     </section>
 
     <section class="card graph-card">

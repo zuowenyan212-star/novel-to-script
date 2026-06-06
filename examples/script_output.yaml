@@ -1,4 +1,4 @@
-schema_version: '1.0'
+schema_version: '1.1'
 title: 初入县衙
 source:
   type: novel
@@ -9,90 +9,74 @@ source:
     title: 第二章 堂前争执
   - id: chapter_003
     title: 第三章 真相浮现
-logline: 一位新任县令在堂前审案，识破诬告并揭开青石县旧案序幕。
-theme: 公正、观察与真相
+logline: 一段忠于原文情节与人物关系的结构化剧本初稿。
+theme: 人物在原文冲突中推进故事，并逐步揭示真相。
+adaptation_style: 忠于原文
 characters:
 - id: char_001
-  name: 林安
-  role: 主角
-  description: 初到青石县的新任县令，善于观察细节。
-  goal: 查清案件真相。
-- id: char_002
   name: 周伯
+  role: 主角
+  description: 周伯是根据小说文本自动识别出的主角。
+  goal: 推动剧情发展并完成本阶段故事冲突。
+- id: char_002
+  name: 林安
   role: 配角
-  description: 县衙师爷，熟悉本地事务。
-  goal: 协助林安审案。
-- id: char_003
-  name: 商人
-  role: 配角
-  description: 卖布商人，试图诬告他人。
-  goal: 掩盖自己藏银的事实。
-- id: char_004
-  name: 年轻人
-  role: 配角
-  description: 被商人诬告的路人。
-  goal: 洗清冤屈。
+  description: 林安是根据小说文本自动识别出的配角。
+  goal: 推动剧情发展并完成本阶段故事冲突。
+chapter_scripts:
+- chapter_id: chapter_001
+  chapter_title: 第一章 初入县衙
+  summary: 林安第一次走进青石县县衙时，天色刚亮。
+  scene_ids:
+  - scene_001
+- chapter_id: chapter_002
+  chapter_title: 第二章 堂前争执
+  summary: 卖布商人和年轻人在堂前争执。
+  scene_ids:
+  - scene_002
+- chapter_id: chapter_003
+  chapter_title: 第三章 真相浮现
+  summary: 林安发现真相，商人认罪。
+  scene_ids:
+  - scene_003
 scenes:
 - id: scene_001
   source_chapter: chapter_001
   title: 第一章 初入县衙
-  location: 青石县县衙大堂
-  time: 清晨
+  location: 根据原文场景整理
+  time: 未明确
   characters:
   - char_001
   - char_002
-  summary: 林安初入县衙，准备审理第一桩案子。
+  summary: 林安第一次走进青石县县衙时，天色刚亮。
   action:
-  - 林安第一次走进青石县县衙，天色刚亮。
-  - 案桌上压着三卷旧案，县令的位置空着。
+  - 林安第一次走进青石县县衙时，天色刚亮
   dialogue:
-  - speaker: char_002
+  - id: dialogue_001
+    speaker: char_001
+    speaker_name: 周伯
     line: 大人，今日有三桩案子要审。
     emotion: 低声
-  - speaker: char_001
+  - id: dialogue_002
+    speaker: char_002
+    speaker_name: 林安
     line: 那就从第一桩开始。
     emotion: 平静
-  transition: 切至堂前审案。
-- id: scene_002
-  source_chapter: chapter_002
-  title: 第二章 堂前争执
-  location: 县衙大堂
-  time: 白天
-  characters:
-  - char_001
-  - char_002
-  - char_003
-  - char_004
-  summary: 商人指控年轻人偷银，林安发现细节矛盾。
-  action:
-  - 商人跪在堂下，指着年轻人告状。
-  - 林安观察到商人袖口有泥，年轻人鞋底干净。
-  dialogue:
-  - speaker: char_003
-    line: 大人，就是他偷了我的银子。
-    emotion: 激动
-  - speaker: char_004
-    line: 我没有！我只是路过。
-    emotion: 急切
-  - speaker: char_002
-    line: 大人，这案子恐怕没这么简单。
-    emotion: 提醒
-  transition: 切至马车搜查。
-- id: scene_003
-  source_chapter: chapter_003
-  title: 第三章 真相浮现
-  location: 县衙外与大堂之间
-  time: 白天
-  characters:
-  - char_001
-  - char_003
-  - char_004
-  summary: 林安找到银袋，识破商人诬告。
-  action:
-  - 衙役在商人的马车底找到银袋。
-  - 商人脸色大变，跪地求饶。
-  dialogue:
-  - speaker: char_001
-    line: 诬告他人，罪加一等。
-    emotion: 冷静
-  transition: 切至百姓议论与旧案伏笔。
+  transition: 切至下一场
+dialogue_index:
+- id: dialogue_001
+  chapter_id: chapter_001
+  chapter_title: 第一章 初入县衙
+  scene_id: scene_001
+  speaker: char_001
+  speaker_name: 周伯
+  line: 大人，今日有三桩案子要审。
+  emotion: 低声
+- id: dialogue_002
+  chapter_id: chapter_001
+  chapter_title: 第一章 初入县衙
+  scene_id: scene_001
+  speaker: char_002
+  speaker_name: 林安
+  line: 那就从第一桩开始。
+  emotion: 平静

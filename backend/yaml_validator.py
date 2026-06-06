@@ -1,5 +1,6 @@
-from typing import Any, Dict, List, Tuple
-import yaml
+from typing import Any, Dict, List, Optional, Tuple
+
+from .yaml_codec import dump_yaml, load_yaml as parse_yaml
 
 
 REQUIRED_TOP_LEVEL = ["schema_version", "title", "source", "characters", "scenes"]
@@ -7,10 +8,10 @@ REQUIRED_CHARACTER_FIELDS = ["id", "name", "role", "description"]
 REQUIRED_SCENE_FIELDS = ["id", "source_chapter", "title", "location", "time", "characters", "summary", "action", "dialogue"]
 
 
-def load_yaml(yaml_text: str) -> Tuple[Dict[str, Any] | None, List[str]]:
+def load_yaml(yaml_text: str) -> Tuple[Optional[Dict[str, Any]], List[str]]:
     try:
-        data = yaml.safe_load(yaml_text)
-    except yaml.YAMLError as exc:
+        data = parse_yaml(yaml_text)
+    except Exception as exc:
         return None, [f"YAML 无法解析：{exc}"]
 
     if not isinstance(data, dict):
@@ -29,9 +30,13 @@ def validate_script_data(data: Dict[str, Any]) -> Tuple[bool, List[str], List[st
     if errors:
         return False, errors, warnings
 
+    if data.get("schema_version") != "1.1":
+        warnings.append("建议 v0.3 输出使用 schema_version: 1.1，以支持 chapter_scripts 和 dialogue_index。")
+
     source = data.get("source", {})
     if not isinstance(source, dict):
         errors.append("source 必须是对象。")
+        chapters = []
     else:
         chapters = source.get("chapters", [])
         if not isinstance(chapters, list) or not chapters:
@@ -41,12 +46,19 @@ def validate_script_data(data: Dict[str, Any]) -> Tuple[bool, List[str], List[st
                 if not isinstance(chapter, dict) or "id" not in chapter or "title" not in chapter:
                     errors.append("source.chapters 中每个章节都必须包含 id 和 title。")
 
+    chapter_ids = {
+        chapter.get("id")
+        for chapter in chapters
+        if isinstance(chapter, dict) and chapter.get("id")
+    }
+
     characters = data.get("characters", [])
+    character_ids = set()
+    character_id_to_name = {}
+
     if not isinstance(characters, list) or not characters:
         errors.append("characters 必须是非空列表。")
-        character_ids = set()
     else:
-        character_ids = set()
         for idx, character in enumerate(characters, start=1):
             if not isinstance(character, dict):
                 errors.append(f"characters 第 {idx} 项必须是对象。")
@@ -59,18 +71,15 @@ def validate_script_data(data: Dict[str, Any]) -> Tuple[bool, List[str], List[st
                 errors.append(f"角色 id 重复：{char_id}")
             if char_id:
                 character_ids.add(char_id)
+                character_id_to_name[char_id] = character.get("name", "")
 
     scenes = data.get("scenes", [])
+    scene_ids = set()
+    dialogue_ids = set()
+
     if not isinstance(scenes, list) or not scenes:
         errors.append("scenes 必须是非空列表。")
     else:
-        scene_ids = set()
-        chapter_ids = {
-            chapter.get("id")
-            for chapter in source.get("chapters", [])
-            if isinstance(chapter, dict)
-        } if isinstance(source, dict) else set()
-
         for idx, scene in enumerate(scenes, start=1):
             if not isinstance(scene, dict):
                 errors.append(f"scenes 第 {idx} 项必须是对象。")
@@ -116,8 +125,53 @@ def validate_script_data(data: Dict[str, Any]) -> Tuple[bool, List[str], List[st
                         errors.append(f"场景 {scene_id} 的对白 speaker 不存在：{item.get('speaker')}")
                     if not item.get("line"):
                         errors.append(f"场景 {scene_id} 的第 {d_idx} 条对白 line 不能为空。")
+                    if item.get("id"):
+                        if item["id"] in dialogue_ids:
+                            errors.append(f"对白 id 重复：{item['id']}")
+                        dialogue_ids.add(item["id"])
 
-    if not errors and len(scenes) < 3:
+    chapter_scripts = data.get("chapter_scripts")
+    if chapter_scripts is None:
+        warnings.append("建议补充 chapter_scripts 字段，方便按章节查看 YAML 剧本。")
+    elif not isinstance(chapter_scripts, list):
+        errors.append("chapter_scripts 必须是列表。")
+    else:
+        for idx, chapter_script in enumerate(chapter_scripts, start=1):
+            if not isinstance(chapter_script, dict):
+                errors.append(f"chapter_scripts 第 {idx} 项必须是对象。")
+                continue
+            chapter_id = chapter_script.get("chapter_id")
+            if chapter_ids and chapter_id not in chapter_ids:
+                errors.append(f"chapter_scripts 第 {idx} 项引用的章节不存在：{chapter_id}")
+            scene_id_list = chapter_script.get("scene_ids", [])
+            if not isinstance(scene_id_list, list):
+                errors.append(f"chapter_scripts 第 {idx} 项的 scene_ids 必须是列表。")
+            else:
+                for scene_id in scene_id_list:
+                    if scene_ids and scene_id not in scene_ids:
+                        errors.append(f"chapter_scripts 第 {idx} 项引用的场景不存在：{scene_id}")
+
+    dialogue_index = data.get("dialogue_index")
+    if dialogue_index is None:
+        warnings.append("建议补充 dialogue_index 字段，方便单独查看所有台词。")
+    elif not isinstance(dialogue_index, list):
+        errors.append("dialogue_index 必须是列表。")
+    else:
+        for idx, item in enumerate(dialogue_index, start=1):
+            if not isinstance(item, dict):
+                errors.append(f"dialogue_index 第 {idx} 项必须是对象。")
+                continue
+            for field in ["id", "chapter_id", "scene_id", "speaker", "speaker_name", "line"]:
+                if field not in item:
+                    errors.append(f"dialogue_index 第 {idx} 项缺少字段：{field}")
+            if item.get("chapter_id") and chapter_ids and item.get("chapter_id") not in chapter_ids:
+                errors.append(f"dialogue_index 第 {idx} 项引用的章节不存在：{item.get('chapter_id')}")
+            if item.get("scene_id") and scene_ids and item.get("scene_id") not in scene_ids:
+                errors.append(f"dialogue_index 第 {idx} 项引用的场景不存在：{item.get('scene_id')}")
+            if item.get("speaker") and character_ids and item.get("speaker") not in character_ids:
+                errors.append(f"dialogue_index 第 {idx} 项 speaker 不存在：{item.get('speaker')}")
+
+    if not errors and isinstance(scenes, list) and len(scenes) < 3:
         warnings.append("当前场景数量少于 3，建议检查是否充分拆分。")
 
     return len(errors) == 0, errors, warnings
@@ -130,7 +184,3 @@ def validate_yaml_text(yaml_text: str) -> Dict[str, Any]:
 
     valid, errors, warnings = validate_script_data(data)
     return {"valid": valid, "errors": errors, "warnings": warnings, "data": data}
-
-
-def dump_yaml(data: Dict[str, Any]) -> str:
-    return yaml.safe_dump(data, allow_unicode=True, sort_keys=False, indent=2)

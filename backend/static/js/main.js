@@ -7,22 +7,31 @@ const generateBtn = document.getElementById("generateBtn");
 const fillExampleBtn = document.getElementById("fillExampleBtn");
 const clearBtn = document.getElementById("clearBtn");
 const statusText = document.getElementById("statusText");
-const yamlOutput = document.getElementById("yamlOutput");
+const yamlEditor = document.getElementById("yamlEditor");
 const validationBox = document.getElementById("validationBox");
 const downloadBtn = document.getElementById("downloadBtn");
 const copyBtn = document.getElementById("copyBtn");
+const validateEditBtn = document.getElementById("validateEditBtn");
+const restoreBtn = document.getElementById("restoreBtn");
+const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+const historyList = document.getElementById("historyList");
 const characterPreview = document.getElementById("characterPreview");
 const scenePreview = document.getElementById("scenePreview");
+const dialoguePreview = document.getElementById("dialoguePreview");
 const providerSelect = document.getElementById("providerSelect");
 const modelSelect = document.getElementById("modelSelect");
+const adaptationStyle = document.getElementById("adaptationStyle");
 const fileInput = document.getElementById("fileInput");
 const toastWrap = document.getElementById("toastWrap");
 const graphEl = document.getElementById("graph");
 
 let latestYaml = "";
+let generatedYaml = "";
 let latestTitle = "script_output";
 let latestGraph = null;
 let parseTimer = null;
+let editTimer = null;
+let historyItems = [];
 
 const fallbackModels = {
   local: [{ value: "local-rule", label: "本地规则演示模型（无需 API Key）" }],
@@ -57,12 +66,47 @@ function setStatus(message) {
   statusText.textContent = message || "";
 }
 
+function formatTime(date = new Date()) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+}
+
+function pushHistory(action) {
+  const text = yamlEditor.value || "";
+  const item = {
+    time: formatTime(),
+    action,
+    length: text.length,
+    preview: text.slice(0, 60).replace(/\n/g, " "),
+  };
+  historyItems.unshift(item);
+  historyItems = historyItems.slice(0, 20);
+  renderHistory();
+}
+
+function renderHistory() {
+  historyList.innerHTML = "";
+  if (!historyItems.length) {
+    const li = document.createElement("li");
+    li.textContent = "暂无修改记录";
+    historyList.appendChild(li);
+    clearHistoryBtn.disabled = true;
+    return;
+  }
+
+  historyItems.forEach((item, index) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${index + 1}. ${item.action}</strong><br><span>${item.time}｜${item.length} 字｜${item.preview}</span>`;
+    historyList.appendChild(li);
+  });
+  clearHistoryBtn.disabled = false;
+}
+
 function setValidation(valid, errors = [], warnings = []) {
   validationBox.className = "validation " + (valid ? "ok" : "error");
   if (valid) {
     validationBox.textContent = warnings.length
       ? `校验通过，提示：${warnings.join("；")}`
-      : "YAML 校验通过：结构完整，可继续编辑或下载。";
+      : "YAML 校验通过：结构完整，可继续编辑、复制或下载。";
   } else {
     validationBox.textContent = `校验失败：${errors.join("；") || "未知错误"}`;
   }
@@ -86,15 +130,23 @@ async function loadModelOptions() {
     const response = await fetch("/api/models");
     const data = await response.json();
     const modelsMap = {};
-    (data.providers || []).forEach(provider => {
+    const providers = data.providers || [];
+
+    if (providers.length) {
+      providerSelect.innerHTML = "";
+    }
+    providers.forEach(provider => {
       modelsMap[provider.value] = provider.models || [];
+      const option = document.createElement("option");
+      option.value = provider.value;
+      option.textContent = provider.label;
+      providerSelect.appendChild(option);
     });
 
     if (data.default_provider) {
       providerSelect.value = data.default_provider;
     }
     updateModelOptions(modelsMap);
-
     providerSelect.addEventListener("change", () => updateModelOptions(modelsMap));
   } catch (error) {
     updateModelOptions(fallbackModels);
@@ -118,13 +170,23 @@ function renderChapters(chapters) {
   });
 }
 
+function buildCharacterNameMap(data) {
+  const map = {};
+  (data?.characters || []).forEach(character => {
+    map[character.id] = character.name || character.id;
+  });
+  return map;
+}
+
 function renderPreview(data) {
   characterPreview.innerHTML = "";
   scenePreview.innerHTML = "";
+  dialoguePreview.innerHTML = "";
 
   if (!data) return;
 
   latestTitle = data.title || "script_output";
+  const charMap = buildCharacterNameMap(data);
 
   (data.characters || []).forEach(character => {
     const li = document.createElement("li");
@@ -134,8 +196,31 @@ function renderPreview(data) {
 
   (data.scenes || []).forEach(scene => {
     const li = document.createElement("li");
-    li.textContent = `${scene.id || ""}｜${scene.title || ""}｜${scene.location || ""}`;
+    li.textContent = `${scene.id || ""}｜${scene.source_chapter || ""}｜${scene.title || ""}｜${scene.location || ""}`;
     scenePreview.appendChild(li);
+  });
+
+  let dialogues = data.dialogue_index || [];
+  if (!dialogues.length) {
+    (data.scenes || []).forEach(scene => {
+      (scene.dialogue || []).forEach(item => {
+        dialogues.push({
+          id: item.id || "",
+          chapter_id: scene.source_chapter || "",
+          scene_id: scene.id || "",
+          speaker: item.speaker || "",
+          speaker_name: item.speaker_name || charMap[item.speaker] || item.speaker || "",
+          line: item.line || "",
+        });
+      });
+    });
+  }
+
+  dialogues.slice(0, 30).forEach(dialogue => {
+    const li = document.createElement("li");
+    const speakerName = dialogue.speaker_name || charMap[dialogue.speaker] || dialogue.speaker || "未知角色";
+    li.textContent = `${dialogue.id || ""}｜${dialogue.chapter_id || ""}｜${dialogue.scene_id || ""}｜${speakerName}：${dialogue.line || ""}`;
+    dialoguePreview.appendChild(li);
   });
 }
 
@@ -198,14 +283,20 @@ async function uploadFile(file) {
 
 function resetResult() {
   latestYaml = "";
+  generatedYaml = "";
   latestGraph = null;
-  yamlOutput.textContent = "生成后的 YAML 剧本会显示在这里。";
+  yamlEditor.value = "";
   validationBox.className = "validation";
   validationBox.textContent = "等待生成结果";
   downloadBtn.disabled = true;
   copyBtn.disabled = true;
+  validateEditBtn.disabled = true;
+  restoreBtn.disabled = true;
   characterPreview.innerHTML = "";
   scenePreview.innerHTML = "";
+  dialoguePreview.innerHTML = "";
+  historyItems = [];
+  renderHistory();
   drawGraph(null);
 }
 
@@ -213,6 +304,40 @@ function setLoading(loading) {
   generateBtn.disabled = loading;
   fileInput.disabled = loading;
   generateBtn.textContent = loading ? "生成中..." : "生成剧本";
+}
+
+async function validateEditedYaml(showSuccessToast = true) {
+  const text = yamlEditor.value.trim();
+  if (!text) {
+    showToast("暂无可校验内容", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/validate-yaml", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({yaml_text: text}),
+    });
+    const result = await response.json();
+    setValidation(result.valid, result.errors || [], result.warnings || []);
+    renderPreview(result.data);
+
+    const graphResponse = await fetch("/api/character-graph", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({yaml_text: text}),
+    });
+    latestGraph = await graphResponse.json();
+    drawGraph(latestGraph);
+
+    if (showSuccessToast) {
+      showToast(result.valid ? "编辑版 YAML 校验通过" : "编辑版 YAML 仍有问题", result.valid ? "success" : "error");
+    }
+  } catch (error) {
+    setValidation(false, ["校验接口请求失败"]);
+    if (showSuccessToast) showToast("校验失败，请确认后端服务正常", "error");
+  }
 }
 
 async function generateScript() {
@@ -224,11 +349,12 @@ async function generateScript() {
 
   setLoading(true);
   setStatus("生成中，请稍候……");
-  yamlOutput.textContent = "";
+  yamlEditor.value = "";
   validationBox.className = "validation";
   validationBox.textContent = "正在生成并校验 YAML";
   characterPreview.innerHTML = "";
   scenePreview.innerHTML = "";
+  dialoguePreview.innerHTML = "";
 
   try {
     const response = await fetch("/api/generate-script", {
@@ -240,13 +366,15 @@ async function generateScript() {
         language: document.getElementById("language").value,
         provider: providerSelect.value,
         model: modelSelect.value,
+        adaptation_style: adaptationStyle.value,
       }),
     });
 
     const result = await response.json();
 
     latestYaml = result.yaml || "";
-    yamlOutput.textContent = latestYaml || "未生成 YAML 内容。";
+    generatedYaml = latestYaml;
+    yamlEditor.value = latestYaml || "";
     setValidation(Boolean(result.validation?.valid), result.validation?.errors || [], result.validation?.warnings || []);
     renderPreview(result.data);
     latestGraph = result.graph || null;
@@ -254,8 +382,11 @@ async function generateScript() {
 
     downloadBtn.disabled = !latestYaml;
     copyBtn.disabled = !latestYaml;
+    validateEditBtn.disabled = !latestYaml;
+    restoreBtn.disabled = !latestYaml;
 
     if (result.success) {
+      pushHistory(`生成 YAML（${adaptationStyle.options[adaptationStyle.selectedIndex].text}）`);
       setStatus(result.message || "生成完成");
       showToast(result.mock_mode ? "本地演示生成成功" : "剧本生成成功", "success");
     } else {
@@ -273,21 +404,24 @@ async function generateScript() {
 }
 
 async function copyYaml() {
-  if (!latestYaml) {
+  const text = yamlEditor.value.trim();
+  if (!text) {
     showToast("暂无可复制内容", "error");
     return;
   }
 
   try {
-    await navigator.clipboard.writeText(latestYaml);
-    showToast("复制成功，已复制到剪贴板", "success");
+    await navigator.clipboard.writeText(text);
+    pushHistory("复制编辑版 YAML");
+    showToast("复制成功，已复制编辑后的 YAML", "success");
   } catch (error) {
     showToast("复制失败，请手动选择文本复制", "error");
   }
 }
 
 function downloadYaml() {
-  if (!latestYaml) {
+  const text = yamlEditor.value.trim();
+  if (!text) {
     showToast("暂无可下载内容", "error");
     return;
   }
@@ -297,7 +431,7 @@ function downloadYaml() {
   const timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
   const filename = safeTitle ? `script_${safeTitle}_${timestamp}.yaml` : "script_output.yaml";
 
-  const blob = new Blob([latestYaml], {type: "text/yaml;charset=utf-8"});
+  const blob = new Blob([text], {type: "text/yaml;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -307,7 +441,8 @@ function downloadYaml() {
   a.remove();
   URL.revokeObjectURL(url);
 
-  showToast("下载成功，YAML 文件已保存", "success");
+  pushHistory("下载编辑版 YAML");
+  showToast("下载成功，已保存编辑后的 YAML", "success");
 }
 
 function drawGraph(graph) {
@@ -417,6 +552,21 @@ novelText.addEventListener("input", () => {
   parseTimer = setTimeout(parseChapters, 300);
 });
 
+yamlEditor.addEventListener("input", () => {
+  latestYaml = yamlEditor.value;
+  if (!latestYaml.trim()) return;
+
+  downloadBtn.disabled = false;
+  copyBtn.disabled = false;
+  validateEditBtn.disabled = false;
+  restoreBtn.disabled = !generatedYaml;
+
+  clearTimeout(editTimer);
+  editTimer = setTimeout(() => {
+    pushHistory("编辑 YAML 内容");
+  }, 800);
+});
+
 fillExampleBtn.addEventListener("click", async () => {
   const response = await fetch("/api/example");
   const result = await response.json();
@@ -453,6 +603,23 @@ fileInput.addEventListener("change", async () => {
 generateBtn.addEventListener("click", generateScript);
 copyBtn.addEventListener("click", copyYaml);
 downloadBtn.addEventListener("click", downloadYaml);
+validateEditBtn.addEventListener("click", () => validateEditedYaml(true));
 
+restoreBtn.addEventListener("click", async () => {
+  if (!generatedYaml) return;
+  yamlEditor.value = generatedYaml;
+  latestYaml = generatedYaml;
+  pushHistory("恢复为生成版 YAML");
+  await validateEditedYaml(false);
+  showToast("已恢复为生成版 YAML", "success");
+});
+
+clearHistoryBtn.addEventListener("click", () => {
+  historyItems = [];
+  renderHistory();
+  showToast("修改历史已清空", "info");
+});
+
+renderHistory();
 loadModelOptions();
 parseChapters();

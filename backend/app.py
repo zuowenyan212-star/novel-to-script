@@ -33,7 +33,7 @@ settings = get_settings()
 app = FastAPI(
     title=settings.app_name,
     description="将 3 个章节以上小说文本转换为结构化 YAML 剧本。",
-    version="1.1.0",
+    version="1.2.0",
 )
 
 app.add_middleware(
@@ -64,7 +64,7 @@ async def index(request: Request):
 async def health():
     return {
         "status": "ok",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "default_provider": settings.llm_provider,
         "default_model": settings.llm_model,
         "mock_mode": settings.use_mock_llm,
@@ -123,6 +123,7 @@ async def generate_script_api(payload: GenerateScriptRequest):
         language=payload.language,
         provider=payload.provider,
         model=payload.model,
+        adaptation_style=payload.adaptation_style,
     )
     return result
 

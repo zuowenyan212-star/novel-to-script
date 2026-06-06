@@ -1,7 +1,7 @@
 from itertools import combinations
 from typing import Any, Dict, List, Tuple
 
-import yaml
+from .yaml_codec import load_yaml
 
 
 def _stringify(value: Any) -> str:
@@ -12,7 +12,7 @@ def _stringify(value: Any) -> str:
 
 def _read_yaml(yaml_text: str) -> Dict[str, Any] | None:
     try:
-        data = yaml.safe_load(yaml_text)
+        data = load_yaml(yaml_text)
     except Exception:
         return None
     return data if isinstance(data, dict) else None

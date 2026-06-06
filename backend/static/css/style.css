@@ -397,3 +397,118 @@ button:disabled {
     flex: 1;
   }
 }
+
+
+/* v0.3 enhancements */
+.yaml-editor {
+  width: 100%;
+  min-height: 430px;
+  max-height: 620px;
+  resize: vertical;
+  overflow: auto;
+  padding: 16px;
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 16px;
+  border: 1px solid #1f2937;
+  white-space: pre;
+  line-height: 1.7;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.yaml-editor:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.2);
+  outline: none;
+}
+
+.history-panel {
+  margin-top: 16px;
+  border-top: 1px solid #eef2f7;
+  padding-top: 14px;
+}
+
+.sub-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sub-title h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.mini-button {
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 12px;
+}
+
+#historyList {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 180px;
+  overflow: auto;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+#historyList span {
+  color: #6b7280;
+}
+
+.preview-card {
+  margin-top: 22px;
+}
+
+.preview-grid-v03 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.preview-grid-v03 > div {
+  min-width: 0;
+}
+
+.preview-grid-v03 ul {
+  max-height: 240px;
+  overflow: auto;
+  padding-right: 8px;
+}
+
+@media (max-width: 1180px) {
+  .preview-grid-v03 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .preview-grid-v03 {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
+
+  .actions button {
+    min-width: 45%;
+  }
+}
+
+
+/* v0.3.1: structured preview no longer separately pulls out chapter scripts. */
+.preview-grid-v03 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 980px) {
+  .preview-grid-v03 {
+    grid-template-columns: 1fr;
+  }
+}

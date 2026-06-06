@@ -23,9 +23,11 @@ class GenerateScriptRequest(BaseModel):
     novel_text: str = Field(..., min_length=1)
     style: str = "影视剧本"
     language: str = "zh-CN"
-    # Enhanced version: page can choose qiniu or local.
     provider: str = "local"
     model: Optional[str] = None
+    # v0.3: adaptation style selector.
+    # values: faithful / dramatic / colloquial
+    adaptation_style: str = "faithful"
 
 
 class ValidationResult(BaseModel):
