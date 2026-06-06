@@ -91,17 +91,67 @@ v0.4 将产品从“结构化剧本生成与编辑”继续延伸到“人物关
 ## 🔄 工作流程
 
 ```mermaid
-flowchart LR
-    A["粘贴或上传小说"] --> B["识别章节与字数"]
-    B --> C{"章节数 ≥ 3?"}
-    C -- "否" --> D["提示补充内容"]
-    C -- "是" --> E["选择模型与改编风格"]
-    E --> F["生成并校验 YAML"]
-    F --> G["编辑 / 恢复 / 复制 / 下载"]
-    F --> H["角色 / 场景 / 台词表格"]
-    F --> I["人物关系图谱"]
-    G --> J{"已选择大模型?"}
-    J -- "是" --> K["生成 AI 短片辅助内容"]
+flowchart TB
+    subgraph INPUT["01 · 内容准备"]
+        direction LR
+        A["📖 粘贴或上传小说"] --> B["🔍 识别章节与统计字数"] --> C{"章节数 ≥ 3？"}
+        C -- "否" --> D["⚠️ 补充小说内容"]
+    end
+
+    subgraph GENERATE["02 · 剧本生成"]
+        direction LR
+        E["🧠 选择模型"] --> F["🎭 选择改编风格"] --> G["⚙️ 生成结构化剧本"] --> H["✅ 校验 YAML"]
+    end
+
+    subgraph WORKSPACE["03 · 创作工作台"]
+        direction LR
+        I["✍️ 编辑 / 恢复"]
+        J["📊 角色 · 场景 · 台词表格"]
+        K["🕸️ 人物关系图谱"]
+        L["📋 复制 / 下载 YAML"]
+    end
+
+    subgraph VIDEO["04 · AI 短片延展"]
+        direction LR
+        M{"已启用大模型？"}
+        N["🔒 本地模式<br/>保留剧本基础能力"]
+        O["🎨 选择视觉风格"]
+        P["🎬 分镜与镜头建议"]
+        Q["🙂 情绪与微表情"]
+        R["🌆 场景描绘提示词"]
+    end
+
+    D -. "补充后重新检测" .-> A
+    C -- "是" --> E
+    H --> I
+    H --> J
+    H --> K
+    I --> L
+    I --> M
+    M -- "否" --> N
+    M -- "是" --> O
+    O --> P
+    O --> Q
+    O --> R
+
+    classDef input fill:#EEF2FF,stroke:#6C63E8,color:#26234F,stroke-width:1.5px;
+    classDef generate fill:#EAFBF6,stroke:#20A883,color:#174E42,stroke-width:1.5px;
+    classDef workspace fill:#F5F1FF,stroke:#8B6DE9,color:#3D2E68,stroke-width:1.5px;
+    classDef decision fill:#FFF8E7,stroke:#E6A63C,color:#694711,stroke-width:1.5px;
+    classDef warning fill:#FFF0F2,stroke:#E5657A,color:#7D2938,stroke-width:1.5px;
+    classDef output fill:#EBF7FF,stroke:#4B9DDB,color:#204F73,stroke-width:1.5px;
+
+    class A,B input;
+    class E,F,G,H generate;
+    class I,J,K,L workspace;
+    class C,M decision;
+    class D,N warning;
+    class O,P,Q,R output;
+
+    style INPUT fill:#FAFBFF,stroke:#D9DDF7,stroke-width:1px
+    style GENERATE fill:#F8FFFC,stroke:#CDEEE3,stroke-width:1px
+    style WORKSPACE fill:#FCFAFF,stroke:#E3DAF8,stroke-width:1px
+    style VIDEO fill:#F8FCFF,stroke:#D5EAF7,stroke-width:1px
 ```
 
 <a id="start"></a>
