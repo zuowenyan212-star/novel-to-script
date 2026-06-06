@@ -21,12 +21,17 @@
 
 ## 🎬 Demo 演示视频
 
-<div align="center">
-  <a href="assets/demo.mp4"><strong>▶ 点击播放演示视频</strong></a>
-</div>
-
-**百度网盘**：[演示视频.mp4](https://pan.baidu.com/s/1aknJzO-MN8p_nsO8trQcKQ?pwd=t8ja)  
-**提取码**：`t8ja`
+<table align="center">
+  <tr>
+    <td align="center">
+      <strong>🎥 小说转剧本 Demo</strong>
+      <br><br>
+      <a href="https://pan.baidu.com/s/1aknJzO-MN8p_nsO8trQcKQ?pwd=t8ja"><strong>▶ 打开百度网盘观看演示视频</strong></a>
+      <br><br>
+      提取码：<code>t8ja</code>
+    </td>
+  </tr>
+</table>
 
 ## 🚀 v0.4 升级说明
 
