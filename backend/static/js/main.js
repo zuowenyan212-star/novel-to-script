@@ -18,6 +18,9 @@ const historyList = document.getElementById("historyList");
 const characterPreview = document.getElementById("characterPreview");
 const scenePreview = document.getElementById("scenePreview");
 const dialoguePreview = document.getElementById("dialoguePreview");
+const characterCountBadge = document.getElementById("characterCountBadge");
+const sceneCountBadge = document.getElementById("sceneCountBadge");
+const dialogueCountBadge = document.getElementById("dialogueCountBadge");
 const providerSelect = document.getElementById("providerSelect");
 const modelSelect = document.getElementById("modelSelect");
 const adaptationStyle = document.getElementById("adaptationStyle");
@@ -243,31 +246,96 @@ function buildCharacterNameMap(data) {
   return map;
 }
 
+function appendTableEmptyState(target, columnCount, message = "暂无数据") {
+  const row = document.createElement("tr");
+  row.className = "empty-row";
+  const cell = document.createElement("td");
+  cell.colSpan = columnCount;
+  cell.innerHTML = `<span>${escapeHtml(message)}</span>`;
+  row.appendChild(cell);
+  target.appendChild(row);
+}
+
+function createTextCell(text, className = "") {
+  const cell = document.createElement("td");
+  if (className) cell.className = className;
+  cell.textContent = text || "—";
+  return cell;
+}
+
+function createTagCell(text, tone = "neutral") {
+  const cell = document.createElement("td");
+  const tag = document.createElement("span");
+  tag.className = `table-tag ${tone}`;
+  tag.textContent = text || "未标注";
+  cell.appendChild(tag);
+  return cell;
+}
+
+function updatePreviewCount(target, count) {
+  if (target) target.textContent = `${count} 条`;
+}
+
 function renderPreview(data) {
   characterPreview.innerHTML = "";
   scenePreview.innerHTML = "";
   dialoguePreview.innerHTML = "";
 
-  if (!data) return;
+  if (!data) {
+    appendTableEmptyState(characterPreview, 3);
+    appendTableEmptyState(scenePreview, 3);
+    appendTableEmptyState(dialoguePreview, 3);
+    updatePreviewCount(characterCountBadge, 0);
+    updatePreviewCount(sceneCountBadge, 0);
+    updatePreviewCount(dialogueCountBadge, 0);
+    return;
+  }
 
   latestTitle = data.title || "script_output";
   const charMap = buildCharacterNameMap(data);
+  const characters = data.characters || [];
+  const scenes = data.scenes || [];
 
-  (data.characters || []).forEach(character => {
-    const li = document.createElement("li");
-    li.textContent = `${character.id || ""}｜${character.name || ""}｜${character.role || ""}`;
-    characterPreview.appendChild(li);
+  characters.forEach(character => {
+    const row = document.createElement("tr");
+    row.appendChild(createTextCell(character.id, "mono-cell"));
+
+    const nameCell = document.createElement("td");
+    const name = document.createElement("strong");
+    name.textContent = character.name || "未命名角色";
+    nameCell.appendChild(name);
+    if (character.description) {
+      const description = document.createElement("small");
+      description.textContent = character.description;
+      nameCell.appendChild(description);
+    }
+    row.appendChild(nameCell);
+    row.appendChild(createTagCell(character.role, "purple"));
+    characterPreview.appendChild(row);
   });
 
-  (data.scenes || []).forEach(scene => {
-    const li = document.createElement("li");
-    li.textContent = `${scene.id || ""}｜${scene.source_chapter || ""}｜${scene.title || ""}｜${scene.location || ""}`;
-    scenePreview.appendChild(li);
+  scenes.forEach(scene => {
+    const row = document.createElement("tr");
+
+    const sceneCell = document.createElement("td");
+    const title = document.createElement("strong");
+    title.textContent = scene.title || scene.id || "未命名场景";
+    sceneCell.appendChild(title);
+    if (scene.id) {
+      const id = document.createElement("small");
+      id.className = "mono-text";
+      id.textContent = scene.id;
+      sceneCell.appendChild(id);
+    }
+    row.appendChild(sceneCell);
+    row.appendChild(createTextCell(scene.source_chapter, "mono-cell"));
+    row.appendChild(createTagCell(scene.location, "blue"));
+    scenePreview.appendChild(row);
   });
 
-  let dialogues = data.dialogue_index || [];
+  let dialogues = [...(data.dialogue_index || [])];
   if (!dialogues.length) {
-    (data.scenes || []).forEach(scene => {
+    scenes.forEach(scene => {
       (scene.dialogue || []).forEach(item => {
         dialogues.push({
           id: item.id || "",
@@ -282,11 +350,32 @@ function renderPreview(data) {
   }
 
   dialogues.slice(0, 30).forEach(dialogue => {
-    const li = document.createElement("li");
+    const row = document.createElement("tr");
     const speakerName = dialogue.speaker_name || charMap[dialogue.speaker] || dialogue.speaker || "未知角色";
-    li.textContent = `${dialogue.id || ""}｜${dialogue.chapter_id || ""}｜${dialogue.scene_id || ""}｜${speakerName}：${dialogue.line || ""}`;
-    dialoguePreview.appendChild(li);
+
+    const sceneCell = document.createElement("td");
+    const sceneId = document.createElement("span");
+    sceneId.className = "mono-text";
+    sceneId.textContent = dialogue.scene_id || "—";
+    sceneCell.appendChild(sceneId);
+    if (dialogue.chapter_id) {
+      const chapterId = document.createElement("small");
+      chapterId.textContent = dialogue.chapter_id;
+      sceneCell.appendChild(chapterId);
+    }
+    row.appendChild(sceneCell);
+    row.appendChild(createTagCell(speakerName, "green"));
+    row.appendChild(createTextCell(dialogue.line, "line-cell"));
+    dialoguePreview.appendChild(row);
   });
+
+  if (!characters.length) appendTableEmptyState(characterPreview, 3);
+  if (!scenes.length) appendTableEmptyState(scenePreview, 3);
+  if (!dialogues.length) appendTableEmptyState(dialoguePreview, 3);
+
+  updatePreviewCount(characterCountBadge, characters.length);
+  updatePreviewCount(sceneCountBadge, scenes.length);
+  updatePreviewCount(dialogueCountBadge, Math.min(dialogues.length, 30));
 }
 
 async function parseChapters() {
@@ -357,9 +446,7 @@ function resetResult() {
   copyBtn.disabled = true;
   validateEditBtn.disabled = true;
   restoreBtn.disabled = true;
-  characterPreview.innerHTML = "";
-  scenePreview.innerHTML = "";
-  dialoguePreview.innerHTML = "";
+  renderPreview(null);
   historyItems = [];
   renderHistory();
   clearVideoAssist();
@@ -419,9 +506,7 @@ async function generateScript() {
   yamlEditor.value = "";
   validationBox.className = "validation";
   validationBox.textContent = "正在生成并校验 YAML";
-  characterPreview.innerHTML = "";
-  scenePreview.innerHTML = "";
-  dialoguePreview.innerHTML = "";
+  renderPreview(null);
 
   try {
     const response = await fetch("/api/generate-script", {
@@ -791,6 +876,7 @@ if (videoAssistBtn) {
 }
 
 renderHistory();
+renderPreview(null);
 loadModelOptions();
 parseChapters();
 updateAssistState();

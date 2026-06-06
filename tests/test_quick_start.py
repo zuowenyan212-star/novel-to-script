@@ -21,6 +21,8 @@ def test_quick_start_template_does_not_require_jinja_rendering():
     )
     assert "{{" not in html
     assert "{%" not in html
+    assert '<table class="data-table character-table">' in html
+    assert '<tbody id="dialoguePreview"></tbody>' in html
 
 
 def test_quick_start_text_upload_uses_standard_library():
