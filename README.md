@@ -19,6 +19,20 @@
 
 ---
 
+## 🎬 Demo 演示视频
+
+<table align="center">
+  <tr>
+    <td align="center">
+      <strong>🎥 小说转剧本 Demo</strong>
+      <br><br>
+      <a href="https://pan.baidu.com/s/1aknJzO-MN8p_nsO8trQcKQ?pwd=t8ja"><strong>▶ 打开百度网盘观看演示视频</strong></a>
+      <br><br>
+      提取码：<code>t8ja</code>
+    </td>
+  </tr>
+</table>
+
 ## 🚀 v0.4 升级说明
 
 v0.4 将产品从“结构化剧本生成与编辑”继续延伸到“人物关系理解与 AI 短片前期准备”：
