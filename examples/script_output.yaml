@@ -1,0 +1,82 @@
+schema_version: '1.1'
+title: 初入县衙
+source:
+  type: novel
+  chapters:
+  - id: chapter_001
+    title: 第一章 初入县衙
+  - id: chapter_002
+    title: 第二章 堂前争执
+  - id: chapter_003
+    title: 第三章 真相浮现
+logline: 一段忠于原文情节与人物关系的结构化剧本初稿。
+theme: 人物在原文冲突中推进故事，并逐步揭示真相。
+adaptation_style: 忠于原文
+characters:
+- id: char_001
+  name: 周伯
+  role: 主角
+  description: 周伯是根据小说文本自动识别出的主角。
+  goal: 推动剧情发展并完成本阶段故事冲突。
+- id: char_002
+  name: 林安
+  role: 配角
+  description: 林安是根据小说文本自动识别出的配角。
+  goal: 推动剧情发展并完成本阶段故事冲突。
+chapter_scripts:
+- chapter_id: chapter_001
+  chapter_title: 第一章 初入县衙
+  summary: 林安第一次走进青石县县衙时，天色刚亮。
+  scene_ids:
+  - scene_001
+- chapter_id: chapter_002
+  chapter_title: 第二章 堂前争执
+  summary: 卖布商人和年轻人在堂前争执。
+  scene_ids:
+  - scene_002
+- chapter_id: chapter_003
+  chapter_title: 第三章 真相浮现
+  summary: 林安发现真相，商人认罪。
+  scene_ids:
+  - scene_003
+scenes:
+- id: scene_001
+  source_chapter: chapter_001
+  title: 第一章 初入县衙
+  location: 根据原文场景整理
+  time: 未明确
+  characters:
+  - char_001
+  - char_002
+  summary: 林安第一次走进青石县县衙时，天色刚亮。
+  action:
+  - 林安第一次走进青石县县衙时，天色刚亮
+  dialogue:
+  - id: dialogue_001
+    speaker: char_001
+    speaker_name: 周伯
+    line: 大人，今日有三桩案子要审。
+    emotion: 低声
+  - id: dialogue_002
+    speaker: char_002
+    speaker_name: 林安
+    line: 那就从第一桩开始。
+    emotion: 平静
+  transition: 切至下一场
+dialogue_index:
+- id: dialogue_001
+  chapter_id: chapter_001
+  chapter_title: 第一章 初入县衙
+  scene_id: scene_001
+  speaker: char_001
+  speaker_name: 周伯
+  line: 大人，今日有三桩案子要审。
+  emotion: 低声
+- id: dialogue_002
+  chapter_id: chapter_001
+  chapter_title: 第一章 初入县衙
+  scene_id: scene_001
+  speaker: char_002
+  speaker_name: 林安
+  line: 那就从第一桩开始。
+  emotion: 平静
