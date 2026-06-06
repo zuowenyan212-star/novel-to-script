@@ -19,6 +19,15 @@
 
 ---
 
+## 🎬 Demo 演示视频
+
+<div align="center">
+  <a href="assets/demo.mp4"><strong>▶ 点击播放演示视频</strong></a>
+</div>
+
+**百度网盘**：[演示视频.mp4](https://pan.baidu.com/s/1aknJzO-MN8p_nsO8trQcKQ?pwd=t8ja)  
+**提取码**：`t8ja`
+
 ## 🚀 v0.4 升级说明
 
 v0.4 将产品从“结构化剧本生成与编辑”继续延伸到“人物关系理解与 AI 短片前期准备”：
