@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 小说转剧本工具</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div id="toastWrap" class="toast-wrap"></div>
+
+  <header class="hero">
+    <div>
+      <div class="eyebrow">XEngineer · AI 小说转剧本工具 v0.4</div>
+      <h1>AI 小说转剧本工具</h1>
+      <p>支持关系冲突图谱、AI 分镜建议、角色情绪捕获、场景提示词和多种改编风格。</p>
+    </div>
+    <span class="badge">v0.4 增强版</span>
+  </header>
+
+  <main class="page">
+    <section class="toolbar">
+      <div class="tool-card">
+        <label for="providerSelect">模型方案</label>
+        <select id="providerSelect">
+          <option value="local">本地演示模型</option>
+          <option value="qiniu">七牛云 API</option>
+        </select>
+        <p class="tool-hint">本地模型无需 API Key，适合 GitHub 下载后快速体验。</p>
+      </div>
+
+      <div class="tool-card">
+        <label for="modelSelect">模型选择</label>
+        <select id="modelSelect"></select>
+        <p class="tool-hint">七牛云模型名可在 .env 中配置。</p>
+      </div>
+
+      <div class="tool-card">
+        <label for="adaptationStyle">改编风格</label>
+        <select id="adaptationStyle">
+          <option value="faithful">忠于原文</option>
+          <option value="dramatic">增强戏剧冲突化</option>
+          <option value="colloquial">口语化</option>
+        </select>
+        <p class="tool-hint">生成时会影响场景张力、台词表达和转场风格。</p>
+      </div>
+
+      <div class="tool-card">
+        <label for="fileInput">上传小说文件</label>
+        <input id="fileInput" type="file" accept=".txt,.md,.docx,.png,.jpg,.jpeg,.webp,.bmp" />
+        <p class="tool-hint">支持 txt、md、docx、图片；图片 OCR 需本机 Tesseract。</p>
+      </div>
+    </section>
+
+    <section class="layout">
+      <section class="card input-card">
+        <div class="card-title">
+          <div>
+            <h2>小说文本输入</h2>
+            <p>请粘贴至少 3 个章节，或上传文件自动填入。</p>
+          </div>
+          <button id="fillExampleBtn" class="secondary">填入示例</button>
+        </div>
+
+        <textarea id="novelText" placeholder="请粘贴至少 3 个章节的小说文本，例如：第一章……第二章……第三章……"></textarea>
+
+        <div class="stats">
+          <span>字数：<strong id="wordCount">0</strong></span>
+          <span>章节数：<strong id="chapterCount">0</strong></span>
+          <span id="chapterHint" class="hint">请至少输入 3 个章节</span>
+        </div>
+
+        <div class="form-row">
+          <label>
+            剧本类型
+            <select id="style">
+              <option value="影视剧本">影视剧本</option>
+              <option value="短剧剧本">短剧剧本</option>
+              <option value="舞台剧剧本">舞台剧剧本</option>
+            </select>
+          </label>
+          <label>
+            输出语言
+            <select id="language">
+              <option value="zh-CN">中文</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="generateBtn" class="primary" disabled>生成剧本</button>
+          <button id="clearBtn" class="ghost">清空输入</button>
+        </div>
+
+        <p id="statusText" class="status"></p>
+
+        <div class="chapter-list">
+          <h3>章节检测结果</h3>
+          <ul id="chapterList"></ul>
+        </div>
+      </section>
+
+      <section class="card result-card">
+        <div class="card-title">
+          <div>
+            <h2>YAML 剧本编辑器</h2>
+            <p>生成结果可直接编辑，复制和下载会使用编辑后的版本。</p>
+          </div>
+          <div class="actions">
+            <button id="validateEditBtn" class="secondary" disabled>校验编辑版</button>
+            <button id="restoreBtn" class="secondary" disabled>恢复生成版</button>
+            <button id="copyBtn" class="secondary" disabled>复制 YAML</button>
+            <button id="downloadBtn" class="secondary" disabled>下载 YAML</button>
+          </div>
+        </div>
+
+        <div id="validationBox" class="validation">等待生成结果</div>
+        <textarea id="yamlEditor" class="yaml-editor" placeholder="生成后的 YAML 剧本会显示在这里，可直接编辑。"></textarea>
+
+        <div class="history-panel">
+          <div class="sub-title">
+            <h3>修改历史</h3>
+            <button id="clearHistoryBtn" class="mini-button" disabled>清空记录</button>
+          </div>
+          <ul id="historyList"></ul>
+        </div>
+      </section>
+    </section>
+
+    <section class="card preview-card">
+      <div class="card-title">
+        <div>
+          <h2>结构化预览</h2>
+          <p>章节划分已保留在最终 YAML 的 chapter_scripts 字段中；这里仅预览角色、场景和台词索引，避免重复拆分展示。</p>
+        </div>
+      </div>
+
+      <div class="preview-grid preview-grid-v03">
+        <div>
+          <h3>角色表预览</h3>
+          <ul id="characterPreview"></ul>
+        </div>
+        <div>
+          <h3>场景列表预览</h3>
+          <ul id="scenePreview"></ul>
+        </div>
+        <div>
+          <h3>台词索引预览</h3>
+          <ul id="dialoguePreview"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card graph-card">
+      <div class="card-title">
+        <div>
+          <h2>人物关系图谱</h2>
+          <p>基于剧情文本识别角色关系：绿色表示友好，红色表示敌对，线条越粗表示同场次数越多。</p>
+        </div>
+      </div>
+      <div id="graph">
+        <div class="empty-graph">生成剧本后，这里会展示人物关系图谱。</div>
+      </div>
+    </section>
+
+    <section class="card assist-card">
+      <div class="card-title">
+        <div>
+          <h2>AI 短片辅助创作</h2>
+          <p>仅在选择“七牛云 API”等大模型时启用，可生成分镜建议、角色情绪/微表情提示词和场景描绘提示词。</p>
+        </div>
+        <div class="actions">
+          <select id="visualStyleSelect" class="compact-select">
+            <option value="manga">漫剧风格</option>
+            <option value="live">真人短剧</option>
+            <option value="cinematic">电影感</option>
+            <option value="anime">动画风格</option>
+          </select>
+          <button id="videoAssistBtn" class="secondary" disabled>生成短片辅助建议</button>
+        </div>
+      </div>
+      <p id="assistLockHint" class="assist-hint">需选择大模型并生成 YAML 后使用。</p>
+      <p id="videoAssistStatus" class="status"></p>
+      <div class="assist-grid">
+        <div>
+          <h3>分镜建议与镜头提示词</h3>
+          <ul id="storyboardList"></ul>
+        </div>
+        <div>
+          <h3>角色情绪与微表情</h3>
+          <ul id="emotionList"></ul>
+        </div>
+        <div>
+          <h3>场景描绘提示词</h3>
+          <ul id="scenePromptList"></ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>
