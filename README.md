@@ -162,7 +162,7 @@ flowchart LR
 python -m backend.dev_server --host 127.0.0.1 --port 8000
 ```
 
-如需在启动前交互式配置七牛云 API（建议把文件.env.example修改为.env后手动配置大模型API）：
+如需在启动前交互式配置七牛云 API（建议把文件.env.example修改为.env后手动配置大模型apikey）：
 
 ```powershell
 python -m backend.dev_server --setup-qiniu --host 127.0.0.1 --port 8000
