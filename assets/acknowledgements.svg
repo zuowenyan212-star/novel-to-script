@@ -36,23 +36,23 @@
   <text x="300" y="139" fill="white" font-size="37" font-weight="800" font-family="Microsoft YaHei, PingFang SC, sans-serif">QINIU CLOUD  ×  XENGINEER</text>
   <text x="302" y="181" fill="#E6E8FA" font-size="20" font-weight="600" font-family="Microsoft YaHei, PingFang SC, sans-serif">Learning · Practice · Engineering · Creation</text>
 
-  <g transform="translate(302 216)">
-    <rect width="205" height="44" rx="22" fill="white" fill-opacity="0.1" stroke="white" stroke-opacity="0.15"/>
+  <g transform="translate(288 216)">
+    <rect width="244" height="44" rx="22" fill="white" fill-opacity="0.1" stroke="white" stroke-opacity="0.15"/>
     <path d="M24 15L16 22L24 29M35 15L43 22L35 29" stroke="#E9FF70" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="58" y="28" fill="white" font-size="14" font-weight="700" font-family="Arial, sans-serif">PRACTICE OPPORTUNITY</text>
+    <text x="58" y="27.5" fill="white" font-size="12" font-weight="700" font-family="Arial, sans-serif" letter-spacing="0.2">PRACTICE OPPORTUNITY</text>
   </g>
 
-  <g transform="translate(521 216)">
-    <rect width="188" height="44" rx="22" fill="white" fill-opacity="0.1" stroke="white" stroke-opacity="0.15"/>
+  <g transform="translate(546 216)">
+    <rect width="212" height="44" rx="22" fill="white" fill-opacity="0.1" stroke="white" stroke-opacity="0.15"/>
     <path d="M19 27C13.4772 27 9 22.5228 9 17C9 11.4772 13.4772 7 19 7C23.6718 7 27.5914 10.2036 28.6898 14.5335C33.3153 14.8827 37 18.7435 37 23.4545C37 28.3953 32.9953 32.4 28.0545 32.4H19V27Z" fill="#79F6D6"/>
-    <text x="51" y="28" fill="white" font-size="14" font-weight="700" font-family="Arial, sans-serif">MODEL API SUPPORT</text>
+    <text x="51" y="27.5" fill="white" font-size="12" font-weight="700" font-family="Arial, sans-serif" letter-spacing="0.2">MODEL API SUPPORT</text>
   </g>
 
-  <g transform="translate(723 216)">
-    <rect width="205" height="44" rx="22" fill="white" fill-opacity="0.1" stroke="white" stroke-opacity="0.15"/>
+  <g transform="translate(772 216)">
+    <rect width="216" height="44" rx="22" fill="white" fill-opacity="0.1" stroke="white" stroke-opacity="0.15"/>
     <path d="M22 8L25.5 17.5L35 21L25.5 24.5L22 34L18.5 24.5L9 21L18.5 17.5L22 8Z" fill="#E9FF70"/>
-    <text x="50" y="28" fill="white" font-size="14" font-weight="700" font-family="Arial, sans-serif">GUIDANCE &amp; GROWTH</text>
+    <text x="50" y="27.5" fill="white" font-size="12" font-weight="700" font-family="Arial, sans-serif" letter-spacing="0.2">GUIDANCE &amp; GROWTH</text>
   </g>
 
-  <text x="1083" y="292" text-anchor="end" fill="#BAD5DB" font-size="12" font-family="Arial, sans-serif" letter-spacing="2">AI NOVEL TO SCRIPT · 2026</text>
+  <text x="1080" y="292" text-anchor="end" fill="#BAD5DB" font-size="11" font-family="Arial, sans-serif" letter-spacing="1.6">AI NOVEL TO SCRIPT · 2026</text>
 </svg>
