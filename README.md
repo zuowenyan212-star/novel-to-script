@@ -91,48 +91,43 @@ v0.4 将产品从“结构化剧本生成与编辑”继续延伸到“人物关
 ## 🔄 工作流程
 
 ```mermaid
-flowchart TB
-    subgraph INPUT["01 · 内容准备"]
-        direction LR
-        A["📖 粘贴或上传小说"] --> B["🔍 识别章节与统计字数"] --> C{"章节数 ≥ 3？"}
-        C -- "否" --> D["⚠️ 补充小说内容"]
+flowchart LR
+    subgraph LEFT["小说转剧本"]
+        direction TB
+        A["📖 输入小说"] --> B["🔍 章节识别"]
+        B --> C{"≥ 3 章？"}
+        C -- "否" --> D["⚠️ 补充后重新检测"]
+        C -- "是" --> E["🧠 模型与改编风格"]
+        E --> F["⚙️ 生成并校验 YAML"]
     end
 
-    subgraph GENERATE["02 · 剧本生成"]
-        direction LR
-        E["🧠 选择模型"] --> F["🎭 选择改编风格"] --> G["⚙️ 生成结构化剧本"] --> H["✅ 校验 YAML"]
+    subgraph RIGHT["剧本工作台与创作延展"]
+        direction TB
+        G["✍️ 编辑 / 恢复 / 复制 / 下载"]
+        H["📊 角色 · 场景 · 台词"]
+        I["🕸️ 人物关系图谱"]
+        J{"启用大模型？"}
+        O["🔒 使用本地基础能力"]
+
+        subgraph OUTPUT["AI 短片辅助"]
+            direction LR
+            K["🎨 视觉风格"]
+            L["🎬 分镜与镜头"]
+            M["🙂 情绪与微表情"]
+            N["🌆 场景提示词"]
+        end
+
+        G --> J
+        J -- "否" --> O
+        J -- "是" --> K
+        K --> L
+        K --> M
+        K --> N
     end
 
-    subgraph WORKSPACE["03 · 创作工作台"]
-        direction LR
-        I["✍️ 编辑 / 恢复"]
-        J["📊 角色 · 场景 · 台词表格"]
-        K["🕸️ 人物关系图谱"]
-        L["📋 复制 / 下载 YAML"]
-    end
-
-    subgraph VIDEO["04 · AI 短片延展"]
-        direction LR
-        M{"已启用大模型？"}
-        N["🔒 本地模式<br/>保留剧本基础能力"]
-        O["🎨 选择视觉风格"]
-        P["🎬 分镜与镜头建议"]
-        Q["🙂 情绪与微表情"]
-        R["🌆 场景描绘提示词"]
-    end
-
-    D -. "补充后重新检测" .-> A
-    C -- "是" --> E
-    H --> I
-    H --> J
-    H --> K
-    I --> L
-    I --> M
-    M -- "否" --> N
-    M -- "是" --> O
-    O --> P
-    O --> Q
-    O --> R
+    F --> G
+    F --> H
+    F --> I
 
     classDef input fill:#EEF2FF,stroke:#6C63E8,color:#26234F,stroke-width:1.5px;
     classDef generate fill:#EAFBF6,stroke:#20A883,color:#174E42,stroke-width:1.5px;
@@ -142,16 +137,15 @@ flowchart TB
     classDef output fill:#EBF7FF,stroke:#4B9DDB,color:#204F73,stroke-width:1.5px;
 
     class A,B input;
-    class E,F,G,H generate;
-    class I,J,K,L workspace;
-    class C,M decision;
-    class D,N warning;
-    class O,P,Q,R output;
+    class E,F generate;
+    class G,H,I workspace;
+    class C,J decision;
+    class D,O warning;
+    class K,L,M,N output;
 
-    style INPUT fill:#FAFBFF,stroke:#D9DDF7,stroke-width:1px
-    style GENERATE fill:#F8FFFC,stroke:#CDEEE3,stroke-width:1px
-    style WORKSPACE fill:#FCFAFF,stroke:#E3DAF8,stroke-width:1px
-    style VIDEO fill:#F8FCFF,stroke:#D5EAF7,stroke-width:1px
+    style LEFT fill:#FAFBFF,stroke:#D9DDF7,stroke-width:1px
+    style RIGHT fill:#FCFAFF,stroke:#E3DAF8,stroke-width:1px
+    style OUTPUT fill:#F8FCFF,stroke:#D5EAF7,stroke-width:1px
 ```
 
 <a id="start"></a>
@@ -168,7 +162,7 @@ flowchart TB
 python -m backend.dev_server --host 127.0.0.1 --port 8000
 ```
 
-如需在启动前交互式配置七牛云 API：
+如需在启动前交互式配置七牛云 API（建议把文件.env.example修改为.env后手动配置大模型API）：
 
 ```powershell
 python -m backend.dev_server --setup-qiniu --host 127.0.0.1 --port 8000
