@@ -411,7 +411,7 @@ python -m pytest -q
     <tr>
       <td align="center">感谢 <strong>七牛云 × XEngineer 暑期实训营</strong> 提供宝贵的学习与项目实践机会，让我们能够完成从需求分析、功能开发到项目交付的完整实践。</td>
       <td align="center">特别感谢 <strong>七牛云</strong> 提供大模型 API Key 与模型服务支持，帮助本项目完成真实模型调用、剧本生成和 AI 短片辅助能力的开发与验证。</td>
-      <td align="center">感谢实训营老师、助教和伙伴们在项目实践过程中给予的指导、建议、交流与陪伴。</td>
+      <td align="center">感谢伙伴们在项目实践过程中给予的指导、建议、交流与陪伴。</td>
     </tr>
   </tbody>
 </table>
