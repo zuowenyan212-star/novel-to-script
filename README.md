@@ -26,9 +26,7 @@
     <td align="center">
       <strong>🎥 小说转剧本 Demo</strong>
       <br><br>
-      <a href="https://pan.baidu.com/s/1aknJzO-MN8p_nsO8trQcKQ?pwd=t8ja"><strong>▶ 打开百度网盘观看演示视频</strong></a>
-      <br><br>
-      提取码：<code>t8ja</code>
+      <a href="https://b23.tv/4tP55LG"><strong>▶ 前往 B 站观看演示视频</strong></a>
     </td>
   </tr>
 </table>
